@@ -1,0 +1,22 @@
+[Unit]
+Description=Food Mate FastAPI
+After=network.target foodmate-proxy.service
+Wants=foodmate-proxy.service
+
+[Service]
+Type=simple
+User=foodmate
+Group=foodmate
+WorkingDirectory=/opt/food-mate/food-mate-api
+EnvironmentFile=-/opt/food-mate/food-mate-api/.env
+Environment=FOODMATE_API_HOST=127.0.0.1
+Environment=FOODMATE_API_PORT=8000
+Environment=FOODMATE_DISABLE_DANGEROUS_TOOLS=1
+Environment=FOODMATE_CORS_ORIGINS=https://foodmates365.com,https://www.foodmates365.com
+Environment=PATH=/opt/food-mate/venv/bin:/usr/bin
+ExecStart=/opt/food-mate/venv/bin/python api_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

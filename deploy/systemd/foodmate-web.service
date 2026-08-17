@@ -1,0 +1,20 @@
+[Unit]
+Description=Food Mate Next.js Web
+After=network.target foodmate-api.service
+Wants=foodmate-api.service
+
+[Service]
+Type=simple
+User=foodmate
+Group=foodmate
+WorkingDirectory=/opt/food-mate/food-mate-web
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+# 生产构建不注入跨端口 API；浏览器走同域 /api
+ExecStart=/usr/bin/npm run start -- -H 127.0.0.1 -p 3000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Food Mate LiteLLM Proxy
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=foodmate
+Group=foodmate
+WorkingDirectory=/opt/food-mate/food-mate-api
+EnvironmentFile=-/opt/food-mate/food-mate-api/.env
+Environment=PATH=/opt/food-mate/venv/bin:/usr/bin
+ExecStart=/opt/food-mate/venv/bin/litellm --config /opt/food-mate/food-mate-api/config.yaml --host 127.0.0.1 --port 4000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,141 @@
+# =============================================================================
+# Food Mate Monorepo — 根目录 .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 敏感信息 / Secrets
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.p12
+*.pfx
+*.key
+!*.key.example
+
+# -----------------------------------------------------------------------------
+# macOS / Windows / 编辑器 / IDE
+# -----------------------------------------------------------------------------
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+.idea/
+.vscode/
+.cursor/
+.toolchain/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# AI 辅助说明文件（不入库）
+CLAUDE.md
+AGENTS.md
+
+# -----------------------------------------------------------------------------
+# Python — food-mate-api
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+.venv/
+venv/
+env/
+ENV/
+
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.manifest
+*.spec
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.ipynb_checkpoints/
+.cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# start.sh 自动生成的依赖安装指纹
+food-mate-api/.requirements.sha256
+
+# 运行时用户数据（不入库）；账号表与默认应用配置保留
+food-mate-api/data/*
+!food-mate-api/data/user_info.csv
+!food-mate-api/data/app_config.json
+food-mate-api/memory/
+
+# -----------------------------------------------------------------------------
+# Node.js / Next.js — food-mate-web
+# -----------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnpm-store/
+
+# Next.js 构建产物
+.next/
+out/
+
+# Vercel / Turbopack
+.vercel
+.turbo
+
+# TypeScript 增量编译缓存
+*.tsbuildinfo
+
+# 前端测试 / Lint 缓存
+coverage/
+.nyc_output/
+.eslintcache
+.prettiercache
+.stylelintcache
+
+# -----------------------------------------------------------------------------
+# 日志 / 临时文件 / 本地数据库
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+*.local
+*.pid
+*.sqlite
+*.sqlite3
+*.db

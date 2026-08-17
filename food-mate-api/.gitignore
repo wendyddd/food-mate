@@ -1,0 +1,38 @@
+# Python 后端（子目录补充，根目录 .gitignore 已覆盖大部分规则）
+
+# 敏感信息
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+
+# 运行时用户数据（记忆、会话不入库；账号表与默认应用配置保留）
+data/*
+!data/user_info.csv
+!data/app_config.json
+memory/users/*
+
+# 依赖安装指纹（start.sh 自动生成）
+.requirements.sha256
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store
