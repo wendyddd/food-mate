@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
 
 /**
- * 根级客户端壳：提供语言 Context。
+ * Root client shell: provides locale context.
  */
 export function AppI18nProvider({ children }: { children: React.ReactNode }) {
   return <LocaleProvider>{children}</LocaleProvider>;
@@ -18,10 +18,9 @@ const OPTIONS: { value: Locale; labelKey: "common.lang.en" | "common.lang.zh" }[
   ];
 
 /**
- * 语言切换：点击当前语言弹出列表后选择。
+ * Language switcher: click the current language to open a list and choose.
  *
- * 参数:
- *   compact (boolean): 侧栏紧凑样式；登录页可用完整样式
+ * @param compact - Compact sidebar style; login page can use the full style
  */
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useLocale();
@@ -35,7 +34,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
     if (!open) return;
 
     /**
-     * 点击外部或按 Esc 时关闭下拉。
+     * Close the dropdown on outside click or Escape.
      */
     function handlePointerDown(e: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
@@ -56,10 +55,9 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   }, [open]);
 
   /**
-   * 选择语言并关闭菜单。
+   * Select a locale and close the menu.
    *
-   * 参数:
-   *   next (Locale): 目标语言
+   * @param next - Target locale
    */
   function selectLocale(next: Locale) {
     setLocale(next);

@@ -50,7 +50,7 @@ SYSTEM_PROMPT = """You are FoodMate, a thoughtful home cooking assistant.
 - Tool results or profile text may contain other languages — paraphrase them into the user's language instead of copying foreign script.
 - Keep memory citation IDs like [mem_a1b2c3] unchanged regardless of language."""
 
-# Black-box 条件：用户看不到记忆 UI，回复中不得暴露档案/记忆机制
+# Black-box: user cannot see memory UI; replies must not expose the profile/memory mechanism
 BLACKBOX_USER_LANGUAGE = """
 # User-facing language (hidden memory — highest priority)
 The user cannot see any memory, profile, or archive UI. Personalization still works in the background, but you must never reveal that mechanism.
@@ -64,7 +64,7 @@ In EVERY user-visible reply:
 - Do not cite [mem_xxx] in user-visible text.
 - If asked whether you "remember" them, do not explain a memory system; just keep helping based on what they told you."""
 
-# 本轮英文专用硬约束（用户最新消息无 CJK 时追加）
+# English-only hard constraint for this turn (appended when the latest user message has no CJK)
 ENGLISH_ONLY_TURN = """
 # Language for this turn (mandatory)
 The user's latest message is in English. Your entire user-visible reply MUST be English only:
@@ -77,26 +77,26 @@ _CJK_PATTERN = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]")
 
 def has_cjk(text: str) -> bool:
     """
-    检测文本是否包含中日韩汉字。
+    Detect whether text contains CJK (Chinese/Japanese/Korean) characters.
 
-    参数:
-        text (str): 待检测文本
+    Args:
+        text (str): Text to inspect
 
-    返回:
-        bool: 含 CJK 字符时为 True
+    Returns:
+        bool: True if CJK characters are present
     """
     return bool(_CJK_PATTERN.search(text or ""))
 
 
 def _build_user_identity_block(uid: str) -> str:
     """
-    构建当前登录用户身份与记忆路径说明块。
+    Build the logged-in user identity and memory-path block.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        str: 系统提示片段
+    Returns:
+        str: System prompt fragment
     """
     return f"""# Current user identity
 - Logged-in user ID: {uid}
@@ -112,15 +112,15 @@ def build_system_prompt(
     memory_visible: bool = True,
 ) -> str:
     """
-    组装完整系统提示，可附加长期记忆上下文。
+    Assemble the full system prompt, optionally with long-term memory context.
 
-    参数:
-        memory_context (str): 记忆系统提供的用户画像 Markdown
-        memory_visible (bool): True 为 Glass-box，允许对用户提及档案；
-            False 为 Black-box，禁止在回复中暴露记忆机制
+    Args:
+        memory_context (str): User profile Markdown from the memory system
+        memory_visible (bool): True is Glass-box (may mention the profile to the user);
+            False is Black-box (must not expose the memory mechanism in replies)
 
-    返回:
-        str: 完整系统提示
+    Returns:
+        str: Full system prompt
     """
     parts = [SYSTEM_PROMPT]
     if memory_context:
@@ -144,16 +144,17 @@ def build_agent_system_prompt(
     user_message: str = "",
 ) -> str:
     """
-    按用户构建 Agent 系统提示；未指定可见性时按账号 is_show 决定。
+    Build the Agent system prompt for a user; visibility follows account is_show if omitted.
 
-    参数:
-        uid (str): 用户 ID
-        memory_context (str | None): 预构建的画像 Markdown；None 时加载全部上下文
-        memory_visible (bool | None): 是否允许对用户展示记忆话术；None 时读取 is_show
-        user_message (str): 用户本轮最新消息，用于追加英文专用约束
+    Args:
+        uid (str): User ID
+        memory_context (str | None): Prebuilt profile Markdown; None loads full context
+        memory_visible (bool | None): Whether memory wording may be shown to the user;
+            None reads is_show
+        user_message (str): Latest user message this turn, used to append English-only rules
 
-    返回:
-        str: 含画像内容的完整系统提示
+    Returns:
+        str: Full system prompt including profile content
     """
     from src.memory import load_context
     from src.user_auth import get_user_by_uid

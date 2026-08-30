@@ -29,7 +29,7 @@ const DONUT_STROKE = 26;
 const DONUT_GAP = 5;
 
 /**
- * 记忆总览：左侧分类列表 + 右侧环形图 + 来源标签。
+ * Memory overview: category list on the left, donut chart on the right, plus source chips.
  */
 export default function MemoryOverview({ entries }: Props) {
   const t = useT();
@@ -65,7 +65,7 @@ export default function MemoryOverview({ entries }: Props) {
         {t("memory.overview")}
       </h2>
 
-      {/* 按分类分布：左列表 + 右环 */}
+      {/* Category distribution: list on the left, donut on the right */}
       <div>
         <p
           className="text-[11px] font-medium mb-3"
@@ -79,7 +79,7 @@ export default function MemoryOverview({ entries }: Props) {
         </div>
       </div>
 
-      {/* 按来源分布（用户可见两类） */}
+      {/* Source distribution (two user-visible groups) */}
       {bySource.length > 0 && (
         <div>
           <p
@@ -100,10 +100,9 @@ export default function MemoryOverview({ entries }: Props) {
 }
 
 /**
- * 分类分布条：图标、名称、进度条与数量。
+ * Category distribution bars: icon, name, progress bar, and count.
  *
- * 参数:
- *   stats - 各分类计数与百分比
+ * @param stats - Per-category counts and percentages
  */
 function CategoryBars({ stats }: { stats: CategoryStat[] }) {
   const t = useT();
@@ -154,11 +153,10 @@ function CategoryBars({ stats }: { stats: CategoryStat[] }) {
 }
 
 /**
- * 分类占比环形图，中心显示条目总数，环上标注百分比。
+ * Category donut chart with total count in the center and percentages on the ring.
  *
- * 参数:
- *   stats - 各分类计数与百分比
- *   total - 记忆条目总数
+ * @param stats - Per-category counts and percentages
+ * @param total - Total memory entries
  */
 function CategoryDonut({
   stats,
@@ -183,7 +181,7 @@ function CategoryDonut({
       : active.map((item) => {
           const length = (item.count / total) * usable;
           const mid = cursor + length / 2;
-          // 从 12 点顺时针；SVG 角度从 3 点起算
+          // Clockwise from 12 o'clock; SVG angles start at 3 o'clock
           const angle = -Math.PI / 2 + (mid / circumference) * 2 * Math.PI;
           const dashoffset = circumference / 4 - cursor;
           cursor += length + (active.length > 1 ? DONUT_GAP : 0);
@@ -266,11 +264,10 @@ function CategoryDonut({
 }
 
 /**
- * 来源数量小标签。
+ * Small chip showing a source count.
  *
- * 参数:
- *   source - 用户可见来源分组
- *   count - 该来源条目数
+ * @param source - User-visible source group
+ * @param count - Number of entries from that source
  */
 function SourceChip({
   source,

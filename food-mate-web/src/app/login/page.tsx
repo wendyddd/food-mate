@@ -7,7 +7,7 @@ import { login, setUserSession } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 /**
- * 登录页：uid + 密码登录后跳转会话路由。
+ * Login page: sign in with uid + password, then navigate to the session route.
  */
 export default function LoginPage() {
   const router = useRouter();

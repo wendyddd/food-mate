@@ -1,5 +1,5 @@
 """
-bash 工具，在本机执行 shell 命令，带超时与输出截断保护。
+bash tool: run shell commands locally, with timeout and output truncation.
 """
 
 import re
@@ -7,13 +7,13 @@ import subprocess
 
 from src.tools.registry import registry
 
-# 命令执行超时时间（秒）
+# Command execution timeout (seconds)
 BASH_TIMEOUT = 60
-# 输出最大字符数，超出则截断，避免回灌过多内容
+# Max output characters; truncate beyond this to avoid flooding context
 MAX_OUTPUT_CHARS = 8000
 
-# 危险命令正则黑名单：命中任意一条即拒绝执行，避免对系统造成破坏性影响
-# 每个元素为 (正则模式, 风险说明)
+# Regex blacklist of dangerous commands; any match is rejected to avoid destructive effects
+# Each item is (regex pattern, risk description)
 DANGEROUS_PATTERNS = [
     (
         r"\brm\s+(-[a-zA-Z]*\s+)*(-[a-zA-Z]*[rf][a-zA-Z]*)\s",
@@ -37,13 +37,13 @@ DANGEROUS_PATTERNS = [
 
 def check_dangerous(command: str) -> str | None:
     """
-    检查命令是否命中危险操作黑名单
+    Check whether a command matches the dangerous-operation blacklist.
 
-    参数:
-        command (str): 待检查的 shell 命令
+    Args:
+        command (str): shell command to check
 
-    返回:
-        str | None: 命中时返回风险说明，未命中返回 None
+    Returns:
+        str | None: risk description if matched, otherwise None
     """
     for pattern, reason in DANGEROUS_PATTERNS:
         if re.search(pattern, command, flags=re.IGNORECASE):
@@ -67,15 +67,15 @@ def check_dangerous(command: str) -> str | None:
 )
 def bash(command: str) -> str:
     """
-    执行 shell 命令
+    Execute a shell command.
 
-    参数:
-        command (str): 要执行的 shell 命令
+    Args:
+        command (str): shell command to run
 
-    返回:
-        str: 命令的标准输出与标准错误合并结果（含退出码）
+    Returns:
+        str: combined stdout and stderr (including exit code)
     """
-    # 执行前进行危险操作拦截
+    # Intercept dangerous operations before execution
     reason = check_dangerous(command)
     if reason is not None:
         return f"[已拦截危险命令] 检测到风险操作（{reason}），出于安全考虑拒绝执行：{command}"
@@ -96,7 +96,7 @@ def bash(command: str) -> str:
         output += f"\n[stderr]\n{result.stderr}"
     output += f"\n[exit_code] {result.returncode}"
 
-    # 输出截断保护
+    # Truncate oversized output
     if len(output) > MAX_OUTPUT_CHARS:
         output = output[:MAX_OUTPUT_CHARS] + "\n...[输出过长已截断]"
     return output.strip()

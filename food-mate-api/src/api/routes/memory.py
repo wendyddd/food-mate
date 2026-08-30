@@ -1,5 +1,5 @@
 """
-记忆系统 API 路由，提供结构化条目 CRUD、Markdown 视图与从会话提取能力。
+Memory-system API routes: structured entry CRUD, Markdown view, and extract-from-session.
 """
 
 from __future__ import annotations
@@ -34,27 +34,27 @@ router = APIRouter()
 
 
 class MemoryUserWriteRequest(BaseModel):
-    """写入 user.md 请求体。"""
+    """Request body for writing user.md."""
 
     content: str
 
 
 class ExtractRequest(BaseModel):
-    """从 Web 聊天会话提取并更新记忆的请求体。"""
+    """Request body to extract and update memory from a Web chat session."""
 
     session_id: Optional[str] = None
     model: Optional[str] = None
 
 
 class MemoryEntryCreateRequest(BaseModel):
-    """新增记忆条目请求体。"""
+    """Request body for creating a memory entry."""
 
     category: str
     content: str
 
 
 class MemoryEntryUpdateRequest(BaseModel):
-    """更新记忆条目请求体。"""
+    """Request body for updating a memory entry."""
 
     content: str
     category: Optional[str] = None
@@ -63,9 +63,9 @@ class MemoryEntryUpdateRequest(BaseModel):
 @router.get("/files")
 async def get_memory_files(user: UserRecord = Depends(get_current_user)):
     """
-    获取可编辑的记忆文件清单。
+    List editable memory files.
 
-    返回:
+    Returns:
         dict: {files: ...}
     """
     return {"files": list_memory_files(user.uid)}
@@ -74,9 +74,9 @@ async def get_memory_files(user: UserRecord = Depends(get_current_user)):
 @router.get("/entries")
 async def get_memory_entries(user: UserRecord = Depends(get_current_user)):
     """
-    获取全部结构化记忆条目。
+    List all structured memory entries.
 
-    返回:
+    Returns:
         dict: {entries: [...]}
     """
     entries = list_entries(user.uid)
@@ -89,12 +89,12 @@ async def post_memory_entry(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    新增一条记忆条目。
+    Create a memory entry.
 
-    参数:
-        req (MemoryEntryCreateRequest): 分区与内容
+    Args:
+        req (MemoryEntryCreateRequest): category and content
 
-    返回:
+    Returns:
         dict: {entry: ...}
     """
     try:
@@ -111,19 +111,19 @@ async def put_memory_entry(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    更新指定记忆条目。
+    Update a memory entry.
 
-    参数:
-        entry_id (str): 条目 ID
-        req (MemoryEntryUpdateRequest): 新内容
+    Args:
+        entry_id (str): entry ID
+        req (MemoryEntryUpdateRequest): new content
 
-    返回:
+    Returns:
         dict: {entry: ...}
     """
     try:
         entry = update_entry(user.uid, entry_id, req.content, category=req.category)
     except ValueError as e:
-        # 内容为空 / 分类非法 → 400；条目不存在 → 404
+        # Empty content / invalid category → 400; entry not found → 404
         detail = str(e)
         status = 404 if "not found" in detail.lower() else 400
         raise HTTPException(status_code=status, detail=detail) from e
@@ -136,12 +136,12 @@ async def remove_memory_entry(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    删除指定记忆条目。
+    Delete a memory entry.
 
-    参数:
-        entry_id (str): 条目 ID
+    Args:
+        entry_id (str): entry ID
 
-    返回:
+    Returns:
         dict: {status: "deleted"}
     """
     if not delete_entry(user.uid, entry_id):
@@ -152,9 +152,9 @@ async def remove_memory_entry(
 @router.get("/user")
 async def get_user_memory(user: UserRecord = Depends(get_current_user)):
     """
-    读取当前长期画像 Markdown 导出视图。
+    Read the current long-term profile as a Markdown export.
 
-    返回:
+    Returns:
         dict: {content: str}
     """
     return {"content": load_context(user.uid)}
@@ -166,12 +166,12 @@ async def put_user_memory(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    从 Markdown 覆盖写入记忆（解析为 entries）。
+    Overwrite memory from Markdown (parsed into entries).
 
-    参数:
-        req (MemoryUserWriteRequest): 请求体
+    Args:
+        req (MemoryUserWriteRequest): request body
 
-    返回:
+    Returns:
         dict: {status: "saved"}
     """
     save_user(req.content, user.uid)
@@ -184,12 +184,12 @@ async def extract_memory(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    将 Web 聊天会话中的偏好更新提取并合并进结构化记忆。
+    Extract preference updates from a Web chat session and merge them into structured memory.
 
-    参数:
-        req (ExtractRequest): session_id 与 model
+    Args:
+        req (ExtractRequest): session_id and model
 
-    返回:
+    Returns:
         dict: {changed, user, entries}
     """
     current_user = load_context(user.uid)

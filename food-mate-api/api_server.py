@@ -1,5 +1,5 @@
 """
-food-mate-api 的 FastAPI 启动入口（uvicorn）。
+FastAPI entry point for food-mate-api (uvicorn).
 """
 
 import logging
@@ -12,9 +12,10 @@ from src.api.app import app
 
 def _configure_logging() -> None:
     """
-    配置应用日志，确保 agent/chat 耗时打点写入 stdout（由 start.sh 重定向到日志文件）。
+    Configure app logging so agent/chat timing logs go to stdout
+    (redirected to a log file by start.sh).
 
-    返回:
+    Returns:
         None
     """
     root = logging.getLogger()
@@ -26,18 +27,18 @@ def _configure_logging() -> None:
         )
     else:
         root.setLevel(logging.INFO)
-    # 业务模块显式设为 INFO，避免被 uvicorn 默认级别吞掉
+    # Set business modules to INFO so uvicorn's default level does not hide them
     for name in ("src.agent", "src.api.routes.chat", "src.llm_client"):
         logging.getLogger(name).setLevel(logging.INFO)
 
 
 def main() -> None:
     """
-    启动 FastAPI 服务器。
+    Start the FastAPI server.
 
-    环境变量:
-        FOODMATE_API_PORT (str): 服务端口，默认 8000
-        FOODMATE_API_HOST (str): 监听地址，默认 0.0.0.0；生产建议 127.0.0.1
+    Environment variables:
+        FOODMATE_API_PORT (str): Service port, default 8000
+        FOODMATE_API_HOST (str): Bind address, default 0.0.0.0; use 127.0.0.1 in production
     """
     _configure_logging()
     host = os.environ.get("FOODMATE_API_HOST", "0.0.0.0")

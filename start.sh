@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# FoodMate 一键启动脚本
-# 功能：检查运行环境，安装缺失依赖，并启动后端 API + 前端 Web
+# FoodMate one-click start script
+# Checks the runtime, installs missing dependencies, then starts the backend API and frontend Web
 #
 
 set -euo pipefail
@@ -41,7 +41,7 @@ log_error() {
   echo "[错误] $*" >&2
 }
 
-# 退出时清理所有子进程
+# Clean up all child processes on exit
 cleanup() {
   local code="${1:-0}"
   echo ""
@@ -68,7 +68,7 @@ cleanup() {
 trap 'cleanup 130' INT
 trap 'cleanup 143' TERM
 
-# 检查命令是否存在
+# Require a command to exist
 require_command() {
   local cmd="$1"
   local hint="$2"
@@ -78,7 +78,7 @@ require_command() {
   fi
 }
 
-# 检查端口是否被占用
+# Fail if the port is already in use
 check_port_free() {
   local port="$1"
   local port_label="${2:-未知服务}"
@@ -89,7 +89,7 @@ check_port_free() {
   fi
 }
 
-# 校验 conda Python 环境并安装后端依赖（litellm 需要 Python >=3.10 且 <3.14）
+# Validate the conda Python env and install backend deps (litellm needs Python >=3.10 and <3.14)
 setup_api_env() {
   if [ -n "${FOODMATE_PYTHON:-}" ]; then
     PYTHON_BIN="$FOODMATE_PYTHON"
@@ -140,7 +140,7 @@ PY
   fi
 }
 
-# 初始化前端依赖
+# Set up frontend dependencies
 setup_web_env() {
   require_command node "请先安装 Node.js（建议 18+）。"
   require_command npm "请先安装 npm。"
@@ -158,7 +158,7 @@ setup_web_env() {
   fi
 }
 
-# 启动 LiteLLM Proxy（记忆提取/优化需要；失败时不阻断基础功能）
+# Start LiteLLM Proxy (needed for memory extract/optimize; failure does not block core features)
 start_proxy() {
   if [ ! -f "$API_DIR/.env" ]; then
     log_warn "未找到 $API_DIR/.env，跳过 LiteLLM Proxy。记忆编辑可用，AI 提取/优化可能不可用。"
@@ -197,7 +197,7 @@ PY
   PROXY_PID=""
 }
 
-# 启动后端 FastAPI
+# Start the FastAPI backend
 start_api() {
   log_info "启动后端 API（端口 ${API_PORT}）..."
   (
@@ -220,7 +220,7 @@ start_api() {
   exit 1
 }
 
-# 启动前端 Next.js
+# Start the Next.js frontend
 start_web() {
   log_info "启动前端 Web（端口 ${WEB_PORT}）..."
   (

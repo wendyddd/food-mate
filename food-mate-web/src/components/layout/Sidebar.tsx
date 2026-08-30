@@ -19,7 +19,7 @@ import { useT } from "@/lib/i18n";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Logo from "@/components/shared/Logo";
 
-/** 侧边栏展开 / 收起时的外层宽度 class */
+/** Outer width classes for expanded / collapsed sidebar */
 export const SIDEBAR_WIDTH_EXPANDED = "w-64";
 export const SIDEBAR_WIDTH_COLLAPSED = "w-14";
 
@@ -44,10 +44,7 @@ export default function Sidebar() {
   const isMemory = pathname === `${chatBase}/memory`;
 
   /**
-   * 跳转到对话页（若当前不在对话页）。
-   *
-   * 返回:
-   * void
+   * Navigate to the chat page if not already there.
    */
   const goToChat = useCallback(() => {
     if (!isChat) {
@@ -56,10 +53,7 @@ export default function Sidebar() {
   }, [isChat, router, chatBase]);
 
   /**
-   * 新建对话；若不在对话页则先跳转。
-   *
-   * 返回:
-   * Promise<void>
+   * Start a new chat; navigate to the chat page first if needed.
    */
   const handleNewChat = useCallback(async () => {
     goToChat();
@@ -67,13 +61,9 @@ export default function Sidebar() {
   }, [goToChat, createSession]);
 
   /**
-   * 选中最近会话；若不在对话页则跳转并加载该会话。
+   * Select a recent session; navigate to chat and load it if not already there.
    *
-   * 参数:
-   * id (string): 会话 ID
-   *
-   * 返回:
-   * void
+   * @param id - Session ID
    */
   const handleSelectSession = useCallback(
     (id: string) => {
@@ -147,7 +137,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Memory navigation — 仅 Glass-box（记忆可见）时展示 */}
+        {/* Memory navigation — shown only in Glass-box (memory visible) */}
         {isShow && (
           <div className="px-4 pb-2">
             <Link
@@ -208,7 +198,7 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* uid / 退出 — pinned at bottom */}
+        {/* uid / sign out — pinned at bottom */}
         <div
           className="shrink-0 px-4 py-3"
           style={{ borderTop: "1px solid var(--border)" }}

@@ -1,5 +1,5 @@
 /**
- * 记忆分类与来源的图标、主题色映射，供总览、卡片、引用统一复用。
+ * Icon and theme-color maps for memory categories and sources, reused by overview, cards, and citations.
  */
 
 import type { LucideIcon } from "lucide-react";
@@ -15,7 +15,7 @@ import {
 import type { MemoryCategory } from "./types";
 import type { MessageKey } from "./i18n";
 
-/** 记忆来源类型（与后端 MemorySourceType 对齐） */
+/** Memory source type (aligned with backend MemorySourceType) */
 export type MemorySourceType =
   | "judge"
   | "manual"
@@ -31,20 +31,20 @@ export const MEMORY_SOURCE_TYPES: MemorySourceType[] = [
   "migrate",
 ];
 
-/** 面向用户的来源分组：手动添加 / 来自对话 */
+/** User-facing source groups: manually added / from chat */
 export type UserSourceGroup = "manual" | "chat";
 
 export const USER_SOURCE_GROUPS: UserSourceGroup[] = ["manual", "chat"];
 
 export interface VisualStyle {
   icon: LucideIcon;
-  /** CSS 颜色值，用于图标与徽标 */
+  /** CSS color for icons and badges */
   color: string;
-  /** 浅色背景 */
+  /** Light background */
   bg: string;
 }
 
-/** 五个固定分类的视觉样式 */
+/** Visual styles for the five fixed categories */
 export const CATEGORY_VISUALS: Record<MemoryCategory, VisualStyle> = {
   "Health & Dietary Restrictions": {
     icon: HeartPulse,
@@ -73,7 +73,7 @@ export const CATEGORY_VISUALS: Record<MemoryCategory, VisualStyle> = {
   },
 };
 
-/** 用户可见的两类来源样式 */
+/** Visual styles for the two user-visible source groups */
 export const USER_SOURCE_VISUALS: Record<
   UserSourceGroup,
   VisualStyle & { labelKey: MessageKey }
@@ -93,26 +93,20 @@ export const USER_SOURCE_VISUALS: Record<
 };
 
 /**
- * 按分类名获取视觉样式；未知分类回退到 Other。
+ * Get visual style by category name; unknown categories fall back to Other.
  *
- * 参数:
- *   category - 分类 id
- *
- * 返回:
- *   VisualStyle
+ * @param category - Category id
+ * @returns VisualStyle
  */
 export function getCategoryVisual(category: string): VisualStyle {
   return CATEGORY_VISUALS[category as MemoryCategory] || CATEGORY_VISUALS.Other;
 }
 
 /**
- * 将后端来源类型映射为用户可见分组。
+ * Map a backend source type to a user-visible group.
  *
- * 参数:
- *   sourceType - 原始来源（可为 undefined）
- *
- * 返回:
- *   UserSourceGroup — manual 或 chat
+ * @param sourceType - Raw source (may be undefined)
+ * @returns UserSourceGroup — manual or chat
  */
 export function toUserSourceGroup(
   sourceType?: string | null,
@@ -122,13 +116,10 @@ export function toUserSourceGroup(
 }
 
 /**
- * 按来源类型获取用户可见的视觉样式与文案 key。
+ * Get user-visible visual style and copy key by source type.
  *
- * 参数:
- *   sourceType - 来源类型字符串（可为 undefined）
- *
- * 返回:
- *   带来源文案 key 的视觉样式
+ * @param sourceType - Source type string (may be undefined)
+ * @returns Visual style including the source label key
  */
 export function getSourceVisual(
   sourceType?: string | null,
@@ -137,13 +128,10 @@ export function getSourceVisual(
 }
 
 /**
- * 规范化来源类型；空值视为 manual。
+ * Normalize a source type; empty values are treated as manual.
  *
- * 参数:
- *   sourceType - 原始来源
- *
- * 返回:
- *   MemorySourceType | "unknown"
+ * @param sourceType - Raw source
+ * @returns MemorySourceType | "unknown"
  */
 export function normalizeSourceType(
   sourceType?: string | null,

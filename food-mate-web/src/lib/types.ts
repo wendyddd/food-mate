@@ -16,7 +16,7 @@ export const MEMORY_CATEGORIES = [
 export type MemoryCategory = (typeof MEMORY_CATEGORIES)[number];
 
 /**
- * 分类展示文案（存储仍用英文 MEMORY_CATEGORIES）。
+ * Category display labels (storage still uses English MEMORY_CATEGORIES ids).
  */
 export const MEMORY_CATEGORY_LABELS: Record<
   MemoryCategory,
@@ -45,23 +45,19 @@ export const MEMORY_CATEGORY_LABELS: Record<
 };
 
 /**
- * 读取当前界面语言。界面固定为英文。
+ * Read the current UI locale. The interface is fixed to English.
  *
- * 返回:
- *   "zh" | "en"
+ * @returns "zh" | "en"
  */
 export function getUiLocale(): "zh" | "en" {
   return "en";
 }
 
 /**
- * 按当前 UI 语言返回分类展示名。
+ * Return the category display name for the current UI locale.
  *
- * 参数:
- *   category - 存储用英文分类名
- *
- * 返回:
- *   展示用标签
+ * @param category - English category id used for storage
+ * @returns Display label
  */
 export function getCategoryLabel(category: string): string {
   const locale = getUiLocale();
@@ -71,7 +67,7 @@ export function getCategoryLabel(category: string): string {
 }
 
 /**
- * 单条记忆的一次修改记录。
+ * One revision of a single memory entry.
  */
 export interface MemoryRevision {
   content: string;

@@ -1,5 +1,5 @@
 """
-FoodMate 结构化记忆系统，以 user.json 为主存储，兼容 user.md 迁移与 Markdown 导出。
+FoodMate structured memory: user.json is the primary store, with user.md migration and Markdown export.
 """
 
 from __future__ import annotations
@@ -32,23 +32,23 @@ from src.memory_schema import (
     normalize_category,
 )
 
-# 多用户记忆根目录：memory/users/{uid}/
+# Multi-user memory root: memory/users/{uid}/
 USERS_DIR = MEMORY_DIR / "users"
 
-# 按用户串行化读写，避免 Judge 与 Agent 工具并行写入产生重复条目
+# Serialize reads/writes per user so Judge and Agent tools do not write duplicate entries
 _STORE_LOCKS: dict[str, threading.Lock] = {}
 _STORE_LOCKS_GUARD = threading.Lock()
 
 
 def _uid_lock(uid: str) -> threading.Lock:
     """
-    获取指定用户的记忆存储锁。
+    Get the memory-store lock for a user.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        threading.Lock: 该用户的互斥锁
+    Returns:
+        threading.Lock: Mutex for this user
     """
     with _STORE_LOCKS_GUARD:
         lock = _STORE_LOCKS.get(uid)
@@ -58,7 +58,7 @@ def _uid_lock(uid: str) -> threading.Lock:
         return lock
 
 
-# 画像 Markdown 文件头模板（迁移与导出用）
+# Profile Markdown header template (used for migration and export)
 USER_MD_HEADER = """# User Food Profile
 
 > Maintained by FoodMate — long-term health constraints, taste habits, household context, kitchen setup, and related cooking preferences.
@@ -68,19 +68,19 @@ USER_TEMPLATE = USER_MD_HEADER + "\n".join(
     f"\n## {cat}\n\n(None yet)" for cat in MEMORY_CATEGORIES
 )
 
-# 从 assistant 回复中解析记忆引用的正则（匹配 [mem_xxxxxx]）
+# Regex to parse memory citations from assistant replies (matches [mem_xxxxxx])
 MEMORY_REF_PATTERN = re.compile(r"\[(mem_[a-zA-Z0-9]+)\]")
 
 
 def get_user_memory_dir(uid: str) -> Path:
     """
-    获取指定 uid 的记忆根目录。
+    Get the memory root directory for a uid.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        Path: memory/users/{uid} 绝对路径
+    Returns:
+        Path: Absolute path of memory/users/{uid}
     """
     safe_uid = "".join(c for c in uid if c.isalnum())
     if not safe_uid:
@@ -90,63 +90,63 @@ def get_user_memory_dir(uid: str) -> Path:
 
 def get_user_path(uid: str) -> Path:
     """
-    获取指定 uid 的 user.md 路径（兼容/备份）。
+    Get the user.md path for a uid (compat / backup).
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        Path: user.md 文件路径
+    Returns:
+        Path: user.md file path
     """
     return get_user_memory_dir(uid) / "user.md"
 
 
 def get_user_json_path(uid: str) -> Path:
     """
-    获取指定 uid 的 user.json 路径（主存储）。
+    Get the user.json path for a uid (primary store).
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        Path: user.json 文件路径
+    Returns:
+        Path: user.json file path
     """
     return get_user_memory_dir(uid) / "user.json"
 
 
 def get_user_sessions_dir(uid: str) -> Path:
     """
-    获取指定 uid 的 Web 聊天会话目录。
+    Get the web chat sessions directory for a uid.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        Path: sessions 目录路径
+    Returns:
+        Path: sessions directory path
     """
     return get_user_memory_dir(uid) / "sessions"
 
 
 def _generate_entry_id() -> str:
     """
-    生成短随机记忆条目 ID。
+    Generate a short random memory entry ID.
 
-    返回:
-        str: 格式 mem_xxxxxx
+    Returns:
+        str: Format mem_xxxxxx
     """
     return f"mem_{secrets.token_hex(3)}"
 
 
 def _truncate_quote(text: str, max_len: int = 200) -> str:
     """
-    截断用户原话摘录，避免过长。
+    Truncate a user-quote excerpt so it does not grow too long.
 
-    参数:
-        text (str): 原始文本
-        max_len (int): 最大字符数
+    Args:
+        text (str): Original text
+        max_len (int): Max character count
 
-    返回:
-        str: 截断后的摘录
+    Returns:
+        str: Truncated excerpt
     """
     cleaned = (text or "").strip()
     if len(cleaned) <= max_len:
@@ -165,19 +165,19 @@ def _build_updated_entry(
     source_quote: str | None = None,
 ) -> MemoryEntry:
     """
-    基于现有条目生成更新后的条目，并追加一条修改记录。
+    Build an updated entry from an existing one and append a revision record.
 
-    参数:
-        entry (MemoryEntry): 原条目
-        content (str): 新正文
-        category (str | None): 新分类；为 None 时保持原分类
-        changed_at (float | None): 修改时间；默认当前时间
-        change_source (str | None): 本次修改来源类型
-        source_session_id (str | None): 触发本次修改的会话 ID
-        source_quote (str | None): 触发本次修改的用户原话
+    Args:
+        entry (MemoryEntry): Original entry
+        content (str): New content
+        category (str | None): New category; keep the original if None
+        changed_at (float | None): Change time; defaults to now
+        change_source (str | None): Source type of this change
+        source_session_id (str | None): Session ID that triggered this change
+        source_quote (str | None): User quote that triggered this change
 
-    返回:
-        MemoryEntry: 带 revisions 的新条目；无实质变更则返回原条目
+    Returns:
+        MemoryEntry: New entry with revisions; original entry if nothing changed
     """
     new_category = category if category is not None else entry.category
     if content == entry.content and new_category == entry.category:
@@ -215,15 +215,15 @@ def _apply_source_to_entry(
     on_update: bool = False,
 ) -> MemoryEntry:
     """
-    将来源上下文写入记忆条目。
+    Write source context onto a memory entry.
 
-    参数:
-        entry (MemoryEntry): 目标条目
-        source (MemorySourceContext | None): 来源上下文
-        on_update (bool): 是否为更新操作（保留原 created_at 与首次来源可选）
+    Args:
+        entry (MemoryEntry): Target entry
+        source (MemorySourceContext | None): Source context
+        on_update (bool): Whether this is an update (keep created_at and first source)
 
-    返回:
-        MemoryEntry: 带来源信息的条目
+    Returns:
+        MemoryEntry: Entry with source information
     """
     if not source:
         return entry
@@ -253,17 +253,18 @@ def _add_fact_to_store(
     exclude_id: str | None = None,
 ) -> None:
     """
-    将一条原子事实写入 store：与已有近义条合并，否则新增独立条目。
+    Write one atomic fact into the store: merge with a near-duplicate, or add a new entry.
 
-    参数:
-        store (MemoryStore): 当前记忆存储
-        cat (str): 分类
-        content (str): 原子事实正文
-        now (float): 写入时间戳
-        source (MemorySourceContext | None): 来源上下文
-        added_ids (list[str]): 本次新增 id 列表（就地追加）
-        updated_ids (list[str]): 本次更新 id 列表（就地追加）
-        exclude_id (str | None): 查找相似条时排除的 id（避免把不同事实合并回原条）
+    Args:
+        store (MemoryStore): Current memory store
+        cat (str): Category
+        content (str): Atomic fact text
+        now (float): Write timestamp
+        source (MemorySourceContext | None): Source context
+        added_ids (list[str]): IDs added this call (appended in place)
+        updated_ids (list[str]): IDs updated this call (appended in place)
+        exclude_id (str | None): ID to skip when finding similar entries
+            (avoids merging a different fact back into the original)
     """
     similar = find_similar_entry(store.entries, cat, content, exclude_id=exclude_id)
     if similar:
@@ -305,26 +306,26 @@ def _add_fact_to_store(
 
 def _strip_mem_ref_from_line(line: str) -> str:
     """
-    去除列表项行首可能存在的 [mem:xxx] 标记。
+    Strip a leading [mem:xxx] marker from a list-item line if present.
 
-    参数:
-        line (str): 原始列表项文本
+    Args:
+        line (str): Raw list-item text
 
-    返回:
-        str: 纯内容文本
+    Returns:
+        str: Content text only
     """
     return re.sub(r"^\[mem_[a-zA-Z0-9]+\]\s*", "", line.strip()).strip()
 
 
 def _parse_user_md_to_entries(md_content: str) -> list[MemoryEntry]:
     """
-    将 user.md 解析为结构化条目列表。
+    Parse user.md into a list of structured entries.
 
-    参数:
-        md_content (str): user.md 全文
+    Args:
+        md_content (str): Full user.md text
 
-    返回:
-        list[MemoryEntry]: 解析出的记忆条目
+    Returns:
+        list[MemoryEntry]: Parsed memory entries
     """
     now = time.time()
     entries: list[MemoryEntry] = []
@@ -342,7 +343,7 @@ def _parse_user_md_to_entries(md_content: str) -> list[MemoryEntry]:
         item_text = _strip_mem_ref_from_line(line[2:])
         if not item_text or item_text in EMPTY_PLACEHOLDERS:
             continue
-        # 尝试保留行内已有 mem ID
+        # Try to keep an existing inline mem ID
         mem_match = re.search(r"\[(mem_[a-zA-Z0-9]+)\]", line)
         entry_id = mem_match.group(1) if mem_match else _generate_entry_id()
         entries.append(
@@ -359,13 +360,13 @@ def _parse_user_md_to_entries(md_content: str) -> list[MemoryEntry]:
 
 def _entries_to_markdown(entries: list[MemoryEntry]) -> str:
     """
-    将结构化条目渲染为带 ID 的 user.md Markdown。
+    Render structured entries as user.md Markdown with IDs.
 
-    参数:
-        entries (list[MemoryEntry]): 记忆条目列表
+    Args:
+        entries (list[MemoryEntry]): Memory entry list
 
-    返回:
-        str: 完整 Markdown 文本
+    Returns:
+        str: Full Markdown text
     """
     lines = [USER_MD_HEADER.rstrip()]
     by_category: dict[str, list[MemoryEntry]] = {c: [] for c in MEMORY_CATEGORIES}
@@ -388,11 +389,11 @@ def _maybe_migrate_categories(uid: str, store: MemoryStore) -> MemoryStore:
     """
     Migrate legacy Chinese category names to English and persist if changed.
 
-    参数:
+    Args:
         uid (str): User ID
         store (MemoryStore): Current store
 
-    返回:
+    Returns:
         MemoryStore: Store with normalized categories
     """
     changed = False
@@ -422,13 +423,13 @@ def _maybe_migrate_categories(uid: str, store: MemoryStore) -> MemoryStore:
 
 def _read_store(uid: str) -> MemoryStore:
     """
-    从磁盘读取 user.json；不存在时尝试从 user.md 迁移。
+    Read user.json from disk; if missing, try migrating from user.md.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        MemoryStore: 记忆存储
+    Returns:
+        MemoryStore: Memory store
     """
     ensure_memory_dirs(uid)
     json_path = get_user_json_path(uid)
@@ -440,7 +441,7 @@ def _read_store(uid: str) -> MemoryStore:
         except Exception:
             pass
 
-    # 迁移：从 user.md 解析
+    # Migrate: parse from user.md
     user_path = get_user_path(uid)
     md_content = ""
     if user_path.exists():
@@ -459,13 +460,13 @@ def _read_store(uid: str) -> MemoryStore:
 
 def _write_store(uid: str, store: MemoryStore) -> None:
     """
-    将记忆存储写入 user.json，并同步备份 user.md。
+    Write the memory store to user.json and sync a user.md backup.
 
-    参数:
-        uid (str): 用户 ID
-        store (MemoryStore): 记忆存储
+    Args:
+        uid (str): User ID
+        store (MemoryStore): Memory store
 
-    返回:
+    Returns:
         None
     """
     ensure_memory_dirs(uid)
@@ -480,12 +481,12 @@ def _write_store(uid: str, store: MemoryStore) -> None:
 
 def ensure_memory_dirs(uid: str) -> None:
     """
-    确保指定用户的记忆目录与初始文件存在。
+    Ensure the user's memory directory and initial files exist.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
+    Returns:
         None
     """
     user_dir = get_user_memory_dir(uid)
@@ -498,15 +499,16 @@ def ensure_memory_dirs(uid: str) -> None:
 
 def entries_to_context(entries: list[MemoryEntry]) -> str:
     """
-    将给定记忆条目渲染为可注入系统提示的 Markdown。
+    Render given memory entries as Markdown suitable for injecting into the system prompt.
 
-    仅输出有条目的分类，避免未召回的分类被渲染成「(None yet)」造成误导。
+    Only categories that have entries are output, so unrecalled categories are not
+    rendered as "(None yet)" which would be misleading.
 
-    参数:
-        entries (list[MemoryEntry]): 记忆条目列表（可为空）
+    Args:
+        entries (list[MemoryEntry]): Memory entry list (may be empty)
 
-    返回:
-        str: 画像 Markdown 文本；无条目时返回空字符串
+    Returns:
+        str: Profile Markdown; empty string if there are no entries
     """
     if not entries:
         return ""
@@ -528,13 +530,13 @@ def entries_to_context(entries: list[MemoryEntry]) -> str:
 
 def load_context(uid: str) -> str:
     """
-    加载用户长期画像 Markdown（含 [mem:xxx] ID），用于注入系统提示。
+    Load the user's long-term profile Markdown (with [mem:xxx] IDs) for the system prompt.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        str: 画像 Markdown 文本
+    Returns:
+        str: Profile Markdown text
     """
     store = _read_store(uid)
     return entries_to_context(store.entries)
@@ -542,15 +544,15 @@ def load_context(uid: str) -> str:
 
 def save_user(content: str, uid: str) -> None:
     """
-    从 Markdown 覆盖写入记忆（解析为 entries 后存 user.json，保留已有来源）。
+    Overwrite memory from Markdown (parse into entries, store as user.json, keep existing sources).
 
-    写入前会做同类相似合并；冲突条目以 updated_at 较新者为准。
+    Similar same-category entries are merged first; on conflict, the newer updated_at wins.
 
-    参数:
-        content (str): 完整 user.md Markdown
-        uid (str): 用户 ID
+    Args:
+        content (str): Full user.md Markdown
+        uid (str): User ID
 
-    返回:
+    Returns:
         None
     """
     old_store = _read_store(uid)
@@ -560,7 +562,7 @@ def save_user(content: str, uid: str) -> None:
     for e in entries:
         old = old_by_id.get(e.id)
         if old:
-            # 内容有变则刷新 updated_at，便于冲突时按时间择优
+            # Refresh updated_at when content changes so conflicts can prefer the newer one
             content_changed = (old.content or "").strip() != (e.content or "").strip()
             if content_changed:
                 merged.append(
@@ -604,15 +606,16 @@ def save_user(content: str, uid: str) -> None:
 
 def list_entries(uid: str) -> list[MemoryEntry]:
     """
-    列出用户全部结构化记忆条目。
+    List all structured memory entries for a user.
 
-    会将「辣；酸」这类多事实旧条目拆成独立卡片，并只合并真正的近义改写。
+    Splits old multi-fact entries such as "spicy; sour" into separate cards, and only
+    merges true near-paraphrases of the same fact.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        list[MemoryEntry]: 条目列表
+    Returns:
+        list[MemoryEntry]: Entry list
     """
     with _uid_lock(uid):
         store = _read_store(uid)
@@ -625,14 +628,14 @@ def list_entries(uid: str) -> list[MemoryEntry]:
 
 def get_entry(uid: str, entry_id: str) -> MemoryEntry | None:
     """
-    按 ID 获取单条记忆。
+    Get a single memory entry by ID.
 
-    参数:
-        uid (str): 用户 ID
-        entry_id (str): 条目 ID
+    Args:
+        uid (str): User ID
+        entry_id (str): Entry ID
 
-    返回:
-        MemoryEntry | None: 找到则返回条目，否则 None
+    Returns:
+        MemoryEntry | None: The entry if found, otherwise None
     """
     for entry in _read_store(uid).entries:
         if entry.id == entry_id:
@@ -642,14 +645,14 @@ def get_entry(uid: str, entry_id: str) -> MemoryEntry | None:
 
 def get_entries_by_ids(uid: str, entry_ids: list[str]) -> list[MemoryEntry]:
     """
-    批量按 ID 获取记忆条目（保持请求顺序，跳过不存在 ID）。
+    Get memory entries by IDs in request order, skipping missing IDs.
 
-    参数:
-        uid (str): 用户 ID
-        entry_ids (list[str]): 条目 ID 列表
+    Args:
+        uid (str): User ID
+        entry_ids (list[str]): Entry ID list
 
-    返回:
-        list[MemoryEntry]: 匹配到的条目
+    Returns:
+        list[MemoryEntry]: Matched entries
     """
     id_set = set(entry_ids)
     store = _read_store(uid)
@@ -669,19 +672,19 @@ def add_entry(
     source: MemorySourceContext | None = None,
 ) -> MemoryEntry:
     """
-    新增一条记忆条目；若同类已有类似条目则合并或冲突覆盖。
+    Add a memory entry; merge or overwrite on conflict if a similar same-category entry exists.
 
-    参数:
-        uid (str): 用户 ID
-        category (str): 分区名称
-        content (str): 记忆正文
-        source (MemorySourceContext | None): 来源上下文
+    Args:
+        uid (str): User ID
+        category (str): Category name
+        content (str): Memory text
+        source (MemorySourceContext | None): Source context
 
-    返回:
-        MemoryEntry: 新建或合并后的条目
+    Returns:
+        MemoryEntry: Newly created or merged entry
 
     Raises:
-        ValueError: 分区不合法或内容为空
+        ValueError: Invalid category or empty content
     """
     category = normalize_category(category)
     if category not in MEMORY_CATEGORIES:
@@ -690,7 +693,7 @@ def add_entry(
     if not content:
         raise ValueError("Content cannot be empty")
 
-    # 走统一操作路径，复用相似合并 / 冲突消解
+    # Use the shared operation path so similar-merge / conflict resolution is reused
     result = apply_operations(
         uid,
         [MemoryOperation(action="add", category=category, content=content)],
@@ -704,7 +707,7 @@ def add_entry(
         for e in result.entries:
             if e.id == result.added_ids[0]:
                 return e
-    # 回退：返回同类中与内容最相关的一条
+    # Fallback: return the most related same-category entry
     similar = find_similar_entry(result.entries, category, content)
     if similar:
         return similar
@@ -719,20 +722,20 @@ def update_entry(
     source: MemorySourceContext | None = None,
 ) -> MemoryEntry:
     """
-    更新指定记忆条目内容（可选修改分类），并按来源记录本次修改。
+    Update a memory entry's content (and optionally category), recording the change source.
 
-    参数:
-        uid (str): 用户 ID
-        entry_id (str): 条目 ID
-        content (str): 新正文
-        category (str | None): 可选新分类；为 None 时保持原分类
-        source (MemorySourceContext | None): 本次修改来源；为 None 时视为用户手动编辑
+    Args:
+        uid (str): User ID
+        entry_id (str): Entry ID
+        content (str): New content
+        category (str | None): Optional new category; keep the original if None
+        source (MemorySourceContext | None): Source of this change; None means manual edit
 
-    返回:
-        MemoryEntry: 更新后的条目
+    Returns:
+        MemoryEntry: Updated entry
 
     Raises:
-        ValueError: 条目不存在、内容为空或分类非法
+        ValueError: Entry not found, empty content, or invalid category
     """
     content = content.strip()
     if not content:
@@ -744,7 +747,7 @@ def update_entry(
         if new_category not in MEMORY_CATEGORIES:
             raise ValueError(f"Invalid category: {category}")
 
-    # 未显式传入来源时，视为记忆页手动编辑
+    # No explicit source means a manual edit on the memory page
     change_source = source.source_type if source else "manual"
     source_session_id = source.source_session_id if source else None
     source_quote = source.source_quote if source else None
@@ -762,14 +765,14 @@ def update_entry(
                     source_quote=source_quote,
                 )
                 store.entries[i] = updated
-                # 改完再 reconcile，清掉因此产生的近重复
+                # Reconcile after the change to drop near-duplicates it created
                 reconciled, _ = reconcile_entries(store.entries)
                 store.entries = reconciled
                 _write_store(uid, store)
                 for e in store.entries:
                     if e.id == entry_id:
                         return e
-                # 若被合并进其他条目，返回合并结果中最相似的一条
+                # If merged into another entry, return the most similar result
                 similar = find_similar_entry(
                     store.entries, updated.category, updated.content
                 )
@@ -779,14 +782,14 @@ def update_entry(
 
 def delete_entry(uid: str, entry_id: str) -> bool:
     """
-    删除指定记忆条目。
+    Delete a memory entry.
 
-    参数:
-        uid (str): 用户 ID
-        entry_id (str): 条目 ID
+    Args:
+        uid (str): User ID
+        entry_id (str): Entry ID
 
-    返回:
-        bool: 是否成功删除
+    Returns:
+        bool: Whether the entry was deleted
     """
     with _uid_lock(uid):
         store = _read_store(uid)
@@ -805,19 +808,21 @@ def apply_operations(
     source: MemorySourceContext | None = None,
 ) -> ApplyResult:
     """
-    批量应用记忆变更操作（add / update / delete）。
+    Apply a batch of memory operations (add / update / delete).
 
-    add 时若同类已有类似条目：互补则合并内容，冲突则以新内容为准（更新已有条目）。
-    全部操作结束后再做一轮同类 reconcile。
-    同一用户的写入串行执行，避免 Judge 与 Agent 工具并行写出重复条目。
+    On add, if a similar same-category entry exists: merge complementary content,
+    or take the new content on conflict (update the existing entry).
+    After all operations, run one more same-category reconcile.
+    Writes for the same user are serialized so Judge and Agent tools do not
+    write duplicate entries in parallel.
 
-    参数:
-        uid (str): 用户 ID
-        operations (list[MemoryOperation]): 操作列表
-        source (MemorySourceContext | None): 写入来源上下文
+    Args:
+        uid (str): User ID
+        operations (list[MemoryOperation]): Operation list
+        source (MemorySourceContext | None): Write source context
 
-    返回:
-        ApplyResult: 应用结果
+    Returns:
+        ApplyResult: Apply result
     """
     with _uid_lock(uid):
         return _apply_operations_unlocked(uid, operations, source=source)
@@ -830,15 +835,15 @@ def _apply_operations_unlocked(
     source: MemorySourceContext | None = None,
 ) -> ApplyResult:
     """
-    在已持有用户锁的前提下应用记忆操作。
+    Apply memory operations while already holding the user lock.
 
-    参数:
-        uid (str): 用户 ID
-        operations (list[MemoryOperation]): 操作列表
-        source (MemorySourceContext | None): 写入来源上下文
+    Args:
+        uid (str): User ID
+        operations (list[MemoryOperation]): Operation list
+        source (MemorySourceContext | None): Write source context
 
-    返回:
-        ApplyResult: 应用结果
+    Returns:
+        ApplyResult: Apply result
     """
     if not operations:
         store = _read_store(uid)
@@ -850,7 +855,7 @@ def _apply_operations_unlocked(
     deleted_ids: list[str] = []
     now = time.time()
 
-    # 多关键词内容拆成多条 add，保证一事实一张卡片
+    # Split multi-keyword content into multiple adds so each fact is one card
     normalized_ops: list[MemoryOperation] = []
     for op in operations:
         if op.action == "add" and (op.content or "").strip():
@@ -911,7 +916,7 @@ def _apply_operations_unlocked(
             for i, entry in enumerate(store.entries):
                 if entry.id != op.entry_id:
                     continue
-                # Judge 常把「同类不同事实」误发成 update；不同事实应独立成条
+                # Judge often sends distinct same-category facts as update; they should be separate entries
                 if not is_same_memory_fact(entry.content, content):
                     cat = normalize_category(op.category or entry.category)
                     if cat not in MEMORY_CATEGORIES:
@@ -969,14 +974,14 @@ def patch_entries_source(
     source: MemorySourceContext,
 ) -> None:
     """
-    为指定条目补写来源信息（仅当尚未有 source_session_id 时）。
+    Backfill source info on entries that do not yet have source_session_id.
 
-    参数:
-        uid (str): 用户 ID
-        entry_ids (list[str]): 条目 ID 列表
-        source (MemorySourceContext): 来源上下文
+    Args:
+        uid (str): User ID
+        entry_ids (list[str]): Entry ID list
+        source (MemorySourceContext): Source context
 
-    返回:
+    Returns:
         None
     """
     if not entry_ids:
@@ -994,13 +999,13 @@ def patch_entries_source(
 
 def extract_memory_ref_ids(text: str) -> list[str]:
     """
-    从 assistant 回复文本中提取记忆引用 ID 列表（去重保序）。
+    Extract memory citation IDs from assistant reply text (deduped, order preserved).
 
-    参数:
-        text (str): 助手回复正文
+    Args:
+        text (str): Assistant reply body
 
-    返回:
-        list[str]: mem ID 列表
+    Returns:
+        list[str]: mem ID list
     """
     seen: set[str] = set()
     result: list[str] = []
@@ -1014,30 +1019,30 @@ def extract_memory_ref_ids(text: str) -> list[str]:
 
 def _normalize_rel_path(rel_path: str) -> str:
     """
-    规范化前端传入的相对路径字符串。
+    Normalize a relative path string from the frontend.
 
-    参数:
-        rel_path (str): 相对路径
+    Args:
+        rel_path (str): Relative path
 
-    返回:
-        str: POSIX 风格路径
+    Returns:
+        str: POSIX-style path
     """
     return rel_path.replace("\\", "/").strip()
 
 
 def _validate_memory_rel_path(rel_path: str, uid: str) -> Path:
     """
-    校验并解析 memory 相对路径，限定只能访问 user.md。
+    Validate and resolve a memory relative path; only user.md is allowed.
 
-    参数:
-        rel_path (str): 前端相对路径
-        uid (str): 用户 ID
+    Args:
+        rel_path (str): Frontend relative path
+        uid (str): User ID
 
-    返回:
-        Path: 磁盘绝对路径
+    Returns:
+        Path: Absolute disk path
 
     Raises:
-        ValueError: 路径非法
+        ValueError: Invalid path
     """
     normalized = _normalize_rel_path(rel_path).lstrip("./")
     if not normalized.startswith("memory/"):
@@ -1054,13 +1059,13 @@ def _validate_memory_rel_path(rel_path: str, uid: str) -> Path:
 
 def list_memory_files(uid: str) -> list[dict]:
     """
-    列出可编辑的记忆文件元信息。
+    List metadata for editable memory files.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        list[dict]: 文件元信息列表
+    Returns:
+        list[dict]: File metadata list
     """
     ensure_memory_dirs(uid)
     json_path = get_user_json_path(uid)
@@ -1078,14 +1083,14 @@ def list_memory_files(uid: str) -> list[dict]:
 
 def read_memory_file(rel_path: str, uid: str) -> str:
     """
-    安全读取 memory 目录下的文本文件（user.md 导出视图）。
+    Safely read a text file under the memory directory (user.md export view).
 
-    参数:
-        rel_path (str): 相对路径
-        uid (str): 用户 ID
+    Args:
+        rel_path (str): Relative path
+        uid (str): User ID
 
-    返回:
-        str: 文件内容
+    Returns:
+        str: File content
     """
     _validate_memory_rel_path(rel_path, uid)
     return load_context(uid)
@@ -1093,14 +1098,14 @@ def read_memory_file(rel_path: str, uid: str) -> str:
 
 def save_memory_file(rel_path: str, content: str, uid: str) -> None:
     """
-    安全写入 memory 目录（解析 md 写入 user.json）。
+    Safely write the memory directory (parse Markdown into user.json).
 
-    参数:
-        rel_path (str): 相对路径
-        content (str): Markdown 内容
-        uid (str): 用户 ID
+    Args:
+        rel_path (str): Relative path
+        content (str): Markdown content
+        uid (str): User ID
 
-    返回:
+    Returns:
         None
     """
     _validate_memory_rel_path(rel_path, uid)

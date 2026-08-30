@@ -1,5 +1,5 @@
 /**
- * 前端国际化：locale 类型、文案表、读写偏好与 React Context。
+ * Frontend i18n: locale type, message tables, preference persistence, and React Context.
  */
 
 "use client";
@@ -18,7 +18,7 @@ export type Locale = "en" | "zh";
 
 const STORAGE_KEY = "foodmate_locale";
 
-/** 英文文案 */
+/** English copy */
 const en = {
   "common.confirm": "Confirm",
   "common.cancel": "Cancel",
@@ -172,7 +172,7 @@ const en = {
 
 type MessageKey = keyof typeof en;
 
-/** 中文文案 */
+/** Chinese copy */
 const zh: Record<MessageKey, string> = {
   "common.confirm": "确认",
   "common.cancel": "取消",
@@ -322,30 +322,27 @@ const zh: Record<MessageKey, string> = {
 const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, zh };
 
 /**
- * 当前界面固定为英文（语言切换入口已隐藏）。
+ * The UI locale is currently fixed to English (the language switcher is hidden).
  *
- * 返回:
- *   Locale
+ * @returns Locale
  */
 export function detectLocale(): Locale {
   return "en";
 }
 
 /**
- * 读取当前存储的语言（非 React 场景，如 store）。
+ * Read the stored locale (for non-React callers such as the store).
  *
- * 返回:
- *   Locale
+ * @returns Locale
  */
 export function getStoredLocale(): Locale {
   return detectLocale();
 }
 
 /**
- * 持久化语言偏好，并更新 document.lang。
+ * Persist the locale preference and update document.lang.
  *
- * 参数:
- *   locale - 目标语言
+ * @param locale - Target locale
  */
 export function persistLocale(locale: Locale): void {
   try {
@@ -359,15 +356,12 @@ export function persistLocale(locale: Locale): void {
 }
 
 /**
- * 按 key 取文案，支持 {name} 占位符。
+ * Look up copy by key, with optional {name} placeholders.
  *
- * 参数:
- *   locale - 语言
- *   key - 文案 key
- *   params - 可选占位符
- *
- * 返回:
- *   翻译后的字符串
+ * @param locale - Locale
+ * @param key - Message key
+ * @param params - Optional placeholders
+ * @returns Translated string
  */
 export function translate(
   locale: Locale,
@@ -384,14 +378,11 @@ export function translate(
 }
 
 /**
- * 使用当前存储语言翻译（供非组件代码调用）。
+ * Translate using the stored locale (for non-component callers).
  *
- * 参数:
- *   key - 文案 key
- *   params - 可选占位符
- *
- * 返回:
- *   翻译后的字符串
+ * @param key - Message key
+ * @param params - Optional placeholders
+ * @returns Translated string
  */
 export function tGlobal(
   key: MessageKey,
@@ -409,7 +400,7 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 /**
- * 语言 Context Provider，包裹需多语言的客户端树。
+ * Locale context provider wrapping the client tree that needs i18n.
  */
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
@@ -436,7 +427,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     [locale, setLocale, t],
   );
 
-  // 避免 SSR / 首屏语言闪烁：就绪前仍渲染，用检测到的语言
+  // Avoid SSR / first-paint locale flicker: still render before ready, using the detected locale
   if (!ready) {
     return (
       <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
@@ -449,10 +440,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * 读取当前语言与翻译函数。
+ * Read the current locale and translate function.
  *
- * 返回:
- *   { locale, setLocale, t }
+ * @returns { locale, setLocale, t }
  */
 export function useLocale() {
   const ctx = useContext(LocaleContext);
@@ -463,10 +453,9 @@ export function useLocale() {
 }
 
 /**
- * 简写：只要翻译函数。
+ * Shorthand: translate function only.
  *
- * 返回:
- *   t 函数
+ * @returns t function
  */
 export function useT() {
   return useLocale().t;

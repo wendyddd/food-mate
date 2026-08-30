@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 /**
- * 旧版记忆页路径重定向到登录页。
+ * Legacy memory path redirects to the login page.
  */
 export default function LegacyMemoryRedirect() {
   redirect("/login");

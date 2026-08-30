@@ -1,5 +1,5 @@
 """
-Web 聊天会话管理，基于 JSON 文件持久化对话历史。
+Web chat session management, persisting conversation history as JSON files.
 """
 
 import json
@@ -11,7 +11,7 @@ from typing import Any
 from src.config import MEMORY_DIR, PROJECT_ROOT
 from src.memory import ensure_memory_dirs, get_user_sessions_dir
 
-# CLI / 遗留全局会话目录
+# CLI / legacy global session directory
 SESSIONS_DIR = MEMORY_DIR / "sessions"
 _LEGACY_SESSIONS_DIR = PROJECT_ROOT / "data" / "chat_sessions"
 
@@ -20,13 +20,13 @@ _ROLE_LABELS = {"user": "User", "assistant": "Assistant"}
 
 def _sessions_dir(uid: str) -> Path:
     """
-    解析指定用户的会话存储目录。
+    Resolve the session storage directory for a user.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        Path: sessions 目录路径
+    Returns:
+        Path: sessions directory path
     """
     ensure_memory_dirs(uid)
     return get_user_sessions_dir(uid)
@@ -34,12 +34,13 @@ def _sessions_dir(uid: str) -> Path:
 
 def _migrate_legacy_sessions(uid: str) -> None:
     """
-    将旧目录 data/chat_sessions 中的会话 JSON 迁移到用户 sessions 目录。
+    Migrate session JSON files from the legacy data/chat_sessions directory
+    into the user's sessions directory.
 
-    参数:
-        uid (str): 目标用户 ID
+    Args:
+        uid (str): Target user ID
 
-    返回:
+    Returns:
         None
     """
     sessions_dir = _sessions_dir(uid)
@@ -54,12 +55,12 @@ def _migrate_legacy_sessions(uid: str) -> None:
 
 def _ensure_dir(uid: str) -> None:
     """
-    确保用户聊天会话目录存在，并迁移旧目录中的会话文件。
+    Ensure the user's chat session directory exists and migrate legacy session files.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
+    Returns:
         None
     """
     _sessions_dir(uid).mkdir(parents=True, exist_ok=True)
@@ -68,14 +69,14 @@ def _ensure_dir(uid: str) -> None:
 
 def _session_path(uid: str, session_id: str) -> Path:
     """
-    根据 session_id 解析安全的 JSON 文件路径。
+    Resolve a safe JSON file path from session_id.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        Path: 会话 JSON 文件路径
+    Returns:
+        Path: Session JSON file path
     """
     safe_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
     return _sessions_dir(uid) / f"{safe_id}.json"
@@ -83,14 +84,14 @@ def _session_path(uid: str, session_id: str) -> Path:
 
 def _read_file(uid: str, session_id: str) -> dict[str, Any]:
     """
-    读取会话 JSON 并规范化为 v2 结构。
+    Read session JSON and normalize it to the v2 structure.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        dict: 会话数据；不存在时返回空 dict
+    Returns:
+        dict: Session data; empty dict if missing
     """
     path = _session_path(uid, session_id)
     if not path.exists():
@@ -112,14 +113,14 @@ def _read_file(uid: str, session_id: str) -> dict[str, Any]:
 
 def _write_file(uid: str, session_id: str, data: dict[str, Any]) -> None:
     """
-    写入会话 JSON 文件。
+    Write the session JSON file.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
-        data (dict): 会话完整数据
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
+        data (dict): Full session data
 
-    返回:
+    Returns:
         None
     """
     _ensure_dir(uid)
@@ -132,13 +133,13 @@ def _write_file(uid: str, session_id: str, data: dict[str, Any]) -> None:
 
 def list_sessions(uid: str) -> list[dict[str, Any]]:
     """
-    列出指定用户的所有 Web 聊天会话元信息。
+    List metadata for all web chat sessions of a user.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        list[dict]: 含 id、title、updated_at 的会话列表
+    Returns:
+        list[dict]: Session list with id, title, and updated_at
     """
     sessions_dir = _sessions_dir(uid)
     _ensure_dir(uid)
@@ -165,13 +166,13 @@ def list_sessions(uid: str) -> list[dict[str, Any]]:
 
 def create_session(uid: str) -> dict[str, Any]:
     """
-    为指定用户创建新的空聊天会话。
+    Create a new empty chat session for a user.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        dict: 含 id、title 的会话元信息
+    Returns:
+        dict: Session metadata with id and title
     """
     session_id = f"session-{uuid.uuid4().hex[:12]}"
     now = time.time()
@@ -187,18 +188,18 @@ def create_session(uid: str) -> dict[str, Any]:
 
 def rename_session(uid: str, session_id: str, title: str) -> None:
     """
-    重命名会话。
+    Rename a session.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
-        title (str): 新标题
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
+        title (str): New title
 
-    返回:
+    Returns:
         None
 
     Raises:
-        FileNotFoundError: 会话不存在
+        FileNotFoundError: Session does not exist
     """
     data = _read_file(uid, session_id)
     if not data:
@@ -209,14 +210,14 @@ def rename_session(uid: str, session_id: str, title: str) -> None:
 
 def update_title(uid: str, session_id: str, title: str) -> None:
     """
-    更新会话标题（rename_session 别名）。
+    Update the session title (alias of rename_session).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
-        title (str): 新标题
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
+        title (str): New title
 
-    返回:
+    Returns:
         None
     """
     rename_session(uid, session_id, title)
@@ -224,14 +225,14 @@ def update_title(uid: str, session_id: str, title: str) -> None:
 
 def _session_file_candidates(uid: str, session_id: str) -> list[Path]:
     """
-    列出指定 session 可能存在的所有 JSON 文件路径（含遗留目录）。
+    List all possible JSON paths for a session (including legacy directories).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        list[Path]: 候选路径列表（按优先级去重）
+    Returns:
+        list[Path]: Candidate paths (deduped by priority)
     """
     safe_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
     filename = f"{safe_id}.json"
@@ -252,14 +253,14 @@ def _session_file_candidates(uid: str, session_id: str) -> list[Path]:
 
 def delete_session(uid: str, session_id: str) -> bool:
     """
-    删除会话 JSON 文件（用户目录及遗留全局目录中的副本）。
+    Delete session JSON files (user directory and legacy global copies).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        bool: 是否至少删除一个文件
+    Returns:
+        bool: Whether at least one file was deleted
     """
     deleted = False
     for path in _session_file_candidates(uid, session_id):
@@ -271,14 +272,14 @@ def delete_session(uid: str, session_id: str) -> bool:
 
 def load_history(uid: str, session_id: str) -> list[dict[str, Any]]:
     """
-    加载会话对话历史（不含 system prompt）。
+    Load session conversation history (without the system prompt).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        list[dict]: 消息列表
+    Returns:
+        list[dict]: Message list
     """
     data = _read_file(uid, session_id)
     if not data:
@@ -288,14 +289,14 @@ def load_history(uid: str, session_id: str) -> list[dict[str, Any]]:
 
 def load_history_for_agent(uid: str, session_id: str) -> list[dict[str, Any]]:
     """
-    加载供 Agent 使用的历史，合并连续 assistant 消息。
+    Load history for the Agent, merging consecutive assistant messages.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        list[dict]: 合并后的 user/assistant 消息列表
+    Returns:
+        list[dict]: Merged user/assistant message list
     """
     messages = load_history(uid, session_id)
     merged: list[dict[str, Any]] = []
@@ -316,17 +317,17 @@ def save_message(
     memory_refs: list[dict[str, Any]] | None = None,
 ) -> None:
     """
-    向会话追加一条消息。
+    Append one message to the session.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
-        role (str): 角色（user / assistant）
-        content (str): 消息正文
-        tool_calls (list | None): 可选工具调用记录
-        memory_refs (list | None): 可选记忆引用列表
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
+        role (str): Role (user / assistant)
+        content (str): Message body
+        tool_calls (list | None): Optional tool-call records
+        memory_refs (list | None): Optional memory reference list
 
-    返回:
+    Returns:
         None
     """
     data = _read_file(uid, session_id)
@@ -349,14 +350,14 @@ def save_message(
 
 def get_raw_messages(uid: str, session_id: str) -> dict[str, Any]:
     """
-    获取会话完整数据（含 title 与 messages）。
+    Get full session data (title and messages).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        dict: 会话数据
+    Returns:
+        dict: Session data
     """
     data = _read_file(uid, session_id)
     if not data:
@@ -366,14 +367,14 @@ def get_raw_messages(uid: str, session_id: str) -> dict[str, Any]:
 
 def get_message_count(uid: str, session_id: str) -> int:
     """
-    获取会话消息条数。
+    Get the number of messages in the session.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        int: 消息数量
+    Returns:
+        int: Message count
     """
     data = _read_file(uid, session_id)
     if not data:
@@ -383,14 +384,14 @@ def get_message_count(uid: str, session_id: str) -> int:
 
 def format_session_as_log(uid: str, session_id: str) -> str:
     """
-    将 Web 聊天会话格式化为可供记忆提取器使用的文本日志。
+    Format a web chat session as a text log for the memory extractor.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        str: 格式化后的会话文本；会话不存在或无消息时返回空字符串
+    Returns:
+        str: Formatted session text; empty string if missing or no messages
     """
     data = _read_file(uid, session_id)
     if not data:
@@ -422,27 +423,27 @@ def format_session_as_log(uid: str, session_id: str) -> str:
 
 def get_session_content(uid: str, session_id: str) -> str:
     """
-    获取指定 Web 聊天会话的格式化文本内容。
+    Get formatted text content of a web chat session.
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): User ID
+        session_id (str): Session ID
 
-    返回:
-        str: 会话文本内容
+    Returns:
+        str: Session text content
     """
     return format_session_as_log(uid, session_id)
 
 
 def get_latest_session_content(uid: str) -> str:
     """
-    获取指定用户最近一次 Web 聊天会话的格式化文本内容。
+    Get formatted text of the user's most recent web chat session.
 
-    参数:
-        uid (str): 用户 ID
+    Args:
+        uid (str): User ID
 
-    返回:
-        str: 最近会话的全文内容；若没有任何会话则返回空字符串
+    Returns:
+        str: Full text of the latest session; empty string if none exist
     """
     sessions = list_sessions(uid)
     if not sessions:

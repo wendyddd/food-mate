@@ -1,5 +1,5 @@
 """
-应用级可持久化设置（如 RAG 模式开关）。
+App-level persistent settings (e.g. RAG mode toggle).
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import Any
 
 from src.config import PROJECT_ROOT
 
-# 应用配置文件路径（与用户数据同属 data/，已被 .gitignore）
+# App config file path (under data/, same as user data; gitignored)
 APP_CONFIG_PATH = PROJECT_ROOT / "data" / "app_config.json"
 
 _lock = threading.Lock()
@@ -18,20 +18,20 @@ _lock = threading.Lock()
 
 def _default_config() -> dict[str, Any]:
     """
-    返回默认应用配置。
+    Return the default app config.
 
-    返回:
-        dict: 默认配置字典
+    Returns:
+        dict: Default config dictionary
     """
     return {"rag_mode": True}
 
 
 def _read_config() -> dict[str, Any]:
     """
-    读取应用配置文件；不存在或损坏时返回默认值。
+    Read the app config file; return defaults if missing or corrupt.
 
-    返回:
-        dict: 配置字典
+    Returns:
+        dict: Config dictionary
     """
     if not APP_CONFIG_PATH.exists():
         return _default_config()
@@ -48,12 +48,12 @@ def _read_config() -> dict[str, Any]:
 
 def _write_config(data: dict[str, Any]) -> None:
     """
-    将配置写入磁盘。
+    Write config to disk.
 
-    参数:
-        data (dict): 完整配置字典
+    Args:
+        data (dict): Full config dictionary
 
-    返回:
+    Returns:
         None
     """
     APP_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -65,10 +65,10 @@ def _write_config(data: dict[str, Any]) -> None:
 
 def get_rag_mode_enabled() -> bool:
     """
-    获取是否开启相关记忆召回（RAG）模式。
+    Return whether relevant-memory recall (RAG) mode is enabled.
 
-    返回:
-        bool: True 表示按相关性筛选记忆后注入
+    Returns:
+        bool: True means inject memories after relevance filtering
     """
     with _lock:
         return bool(_read_config().get("rag_mode", True))
@@ -76,13 +76,13 @@ def get_rag_mode_enabled() -> bool:
 
 def set_rag_mode_enabled(enabled: bool) -> bool:
     """
-    设置相关记忆召回（RAG）模式并持久化。
+    Set relevant-memory recall (RAG) mode and persist it.
 
-    参数:
-        enabled (bool): 是否开启
+    Args:
+        enabled (bool): Whether to enable
 
-    返回:
-        bool: 写入后的 rag_mode 值
+    Returns:
+        bool: rag_mode value after write
     """
     with _lock:
         data = _read_config()

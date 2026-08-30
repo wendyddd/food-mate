@@ -1,5 +1,5 @@
 """
-LLM 客户端模块，封装 OpenAI SDK 与 LiteLLM Proxy 网关的交互逻辑。
+LLM client: wrap OpenAI SDK calls against the LiteLLM Proxy gateway.
 """
 
 from openai import AsyncOpenAI, OpenAI
@@ -14,15 +14,15 @@ def _accumulate_stream_delta(
     tool_calls_acc: dict[int, dict],
 ) -> str | None:
     """
-    处理单个流式 chunk 的 delta，累积文本与 tool_calls。
+    Handle one streamed chunk delta: accumulate text and tool_calls.
 
-    参数:
-        delta: OpenAI ChatCompletionChunk 的 delta 对象
-        content_parts (list[str]): 已累积的文本片段
-        tool_calls_acc (dict[int, dict]): 按 index 累积的 tool_call
+    Args:
+        delta: Delta object from an OpenAI ChatCompletionChunk
+        content_parts (list[str]): Accumulated text fragments
+        tool_calls_acc (dict[int, dict]): tool_call accumulators keyed by index
 
-    返回:
-        str | None: 若有文本 delta 则返回该片段，否则 None
+    Returns:
+        str | None: Text fragment if the delta has content, otherwise None
     """
     token: str | None = None
     if delta.content:
@@ -54,14 +54,14 @@ def _build_assistant_message(
     tool_calls_acc: dict[int, dict],
 ) -> dict:
     """
-    根据流式累积结果组装完整 assistant 消息。
+    Build a complete assistant message from streamed accumulators.
 
-    参数:
-        content_parts (list[str]): 文本片段列表
-        tool_calls_acc (dict[int, dict]): 累积的 tool_calls
+    Args:
+        content_parts (list[str]): Text fragment list
+        tool_calls_acc (dict[int, dict]): Accumulated tool_calls
 
-    返回:
-        dict: OpenAI 格式的 assistant 消息
+    Returns:
+        dict: Assistant message in OpenAI format
     """
     assistant_msg: dict = {
         "role": "assistant",
@@ -76,10 +76,10 @@ def _build_assistant_message(
 
 class LLMClient:
     """
-    LLM 客户端类，封装与 LiteLLM Proxy 网关的通信逻辑。
+    LLM client wrapping communication with the LiteLLM Proxy gateway.
 
-    支持多模型切换，统一调用 OpenAI 兼容接口，可选启用 function calling。
-    同步方法供 CLI 使用，异步方法供 Web SSE 路径使用。
+    Supports switching models, a unified OpenAI-compatible API, and optional function calling.
+    Sync methods are for CLI; async methods are for the Web SSE path.
     """
 
     def __init__(
@@ -89,12 +89,12 @@ class LLMClient:
         default_model: str = DEFAULT_MODEL,
     ):
         """
-        初始化 LLM 客户端
+        Initialize the LLM client.
 
-        参数:
-            base_url (str): LiteLLM Proxy 网关地址，默认读取配置
-            api_key (str): 网关鉴权密钥，默认读取配置
-            default_model (str): 默认使用的模型名称，默认读取配置
+        Args:
+            base_url (str): LiteLLM Proxy gateway URL, default from config
+            api_key (str): Gateway auth key, default from config
+            default_model (str): Default model name, default from config
         """
         self.default_model = default_model
         self._base_url = base_url
@@ -104,10 +104,10 @@ class LLMClient:
 
     def _get_async_client(self) -> AsyncOpenAI:
         """
-        懒加载异步 OpenAI 客户端。
+        Lazily create the async OpenAI client.
 
-        返回:
-            AsyncOpenAI: 异步客户端实例
+        Returns:
+            AsyncOpenAI: Async client instance
         """
         if self._async_client is None:
             self._async_client = AsyncOpenAI(
@@ -124,16 +124,16 @@ class LLMClient:
         stream: bool = False,
     ) -> dict:
         """
-        组装 chat.completions.create 的请求参数。
+        Build request kwargs for chat.completions.create.
 
-        参数:
-            messages (list[dict]): 消息列表
-            model (str | None): 模型名
-            tools (list | None): 工具 schema
-            stream (bool): 是否流式
+        Args:
+            messages (list[dict]): Message list
+            model (str | None): Model name
+            tools (list | None): Tool schemas
+            stream (bool): Whether to stream
 
-        返回:
-            dict: 请求 kwargs
+        Returns:
+            dict: Request kwargs
         """
         kwargs: dict = {
             "model": model or self.default_model,
@@ -153,15 +153,15 @@ class LLMClient:
         tools: list | None = None,
     ) -> ChatCompletionMessage:
         """
-        调用 LLM 进行一次对话补全
+        Call the LLM for one chat completion.
 
-        参数:
-            messages (list[dict]): OpenAI 格式的消息列表
-            model (str | None): 模型名称，为 None 时使用实例默认模型
-            tools (list | None): 可选的工具 schema 列表，传入则启用 function calling
+        Args:
+            messages (list[dict]): Messages in OpenAI format
+            model (str | None): Model name; None uses the instance default
+            tools (list | None): Optional tool schemas; if set, enables function calling
 
-        返回:
-            ChatCompletionMessage: 模型返回的 message 对象（可能含 tool_calls）
+        Returns:
+            ChatCompletionMessage: Model message (may include tool_calls)
         """
         kwargs = self._build_kwargs(messages, model, tools)
         response = self._client.chat.completions.create(**kwargs)
@@ -174,15 +174,15 @@ class LLMClient:
         tools: list | None = None,
     ):
         """
-        流式调用 LLM，逐块 yield 文本 delta。
+        Stream the LLM and yield text deltas chunk by chunk.
 
-        参数:
-            messages (list[dict]): OpenAI 格式消息列表
-            model (str | None): 模型名称
-            tools (list | None): 工具 schema（流式最终回复时不传 tools）
+        Args:
+            messages (list[dict]): Messages in OpenAI format
+            model (str | None): Model name
+            tools (list | None): Tool schemas (omit tools for a streamed final reply)
 
         Yields:
-            str: 每个 token 文本片段
+            str: Each token text fragment
         """
         for event in self.chat_stream_events(messages, model=model, tools=tools):
             if event["type"] == "token":
@@ -195,15 +195,15 @@ class LLMClient:
         tools: list | None = None,
     ):
         """
-        流式调用 LLM，逐块 yield 文本 delta，并在流结束后 yield 完整 assistant 消息。
+        Stream the LLM, yield text deltas, then yield the full assistant message.
 
-        参数:
-            messages (list[dict]): OpenAI 格式消息列表
-            model (str | None): 模型名称
-            tools (list | None): 可选工具 schema，传入则启用 function calling
+        Args:
+            messages (list[dict]): Messages in OpenAI format
+            model (str | None): Model name
+            tools (list | None): Optional tool schemas; if set, enables function calling
 
         Yields:
-            dict: {"type": "token", "content": str} 或
+            dict: {"type": "token", "content": str} or
                   {"type": "message", "message": dict}
         """
         kwargs = self._build_kwargs(messages, model, tools, stream=True)
@@ -232,15 +232,15 @@ class LLMClient:
         tools: list | None = None,
     ):
         """
-        异步流式调用 LLM，逐块 yield 文本 delta，流结束后 yield 完整 assistant 消息。
+        Async stream the LLM, yield text deltas, then yield the full assistant message.
 
-        参数:
-            messages (list[dict]): OpenAI 格式消息列表
-            model (str | None): 模型名称
-            tools (list | None): 可选工具 schema，传入则启用 function calling
+        Args:
+            messages (list[dict]): Messages in OpenAI format
+            model (str | None): Model name
+            tools (list | None): Optional tool schemas; if set, enables function calling
 
         Yields:
-            dict: {"type": "token", "content": str} 或
+            dict: {"type": "token", "content": str} or
                   {"type": "message", "message": dict}
         """
         kwargs = self._build_kwargs(messages, model, tools, stream=True)

@@ -23,17 +23,17 @@ _CATEGORIES_GUIDE = categories_prompt_block()
 
 def _resolve_user_memory_path(path: str, uid: str) -> Path | None:
     """
-    解析并校验路径，限定在当前登录用户的 memory/users/{uid}/ 目录下。
+    Resolve and validate a path, restricting it to the current user's memory/users/{uid}/ directory.
 
-    若路径形如 memory/users/<任意段>/...，强制改写为当前 uid 目录，
-    避免模型使用 default、current、{uid} 等占位符。
+    Paths like memory/users/<any-segment>/... are rewritten to the current uid directory
+    so the model cannot use placeholders such as default, current, or {uid}.
 
-    参数:
-        path (str): 目标文件路径
-        uid (str): 当前登录用户 ID
+    Args:
+        path (str): target file path
+        uid (str): current logged-in user ID
 
-    返回:
-        Path | None: 合法绝对路径，非法时返回 None
+    Returns:
+        Path | None: valid absolute path, or None if invalid
     """
     memory_root = MEMORY_DIR.resolve()
     user_root = get_user_memory_dir(uid).resolve()
@@ -92,13 +92,13 @@ def _resolve_user_memory_path(path: str, uid: str) -> Path | None:
 )
 def read_file(path: str) -> str:
     """
-    读取当前用户记忆目录下的文本文件。
+    Read a text file under the current user's memory directory.
 
-    参数:
-        path (str): 文件路径
+    Args:
+        path (str): file path
 
-    返回:
-        str: 文件内容或错误信息
+    Returns:
+        str: file content or an error message
     """
     try:
         uid = require_tool_uid()
@@ -150,14 +150,14 @@ def read_file(path: str) -> str:
 )
 def write_file(path: str, content: str) -> str:
     """
-    写入当前用户记忆目录下的文本文件。
+    Write a text file under the current user's memory directory.
 
-    参数:
-        path (str): 目标文件路径
-        content (str): 要写入的文本
+    Args:
+        path (str): target file path
+        content (str): text to write
 
-    返回:
-        str: 成功或失败信息
+    Returns:
+        str: success or failure message
     """
     try:
         uid = require_tool_uid()
@@ -211,21 +211,21 @@ def write_file(path: str, content: str) -> str:
 )
 def update_user(category: str, content: str, entry_id: str = "") -> str:
     """
-    为当前用户新增或更新结构化记忆条目。
+    Add or update a structured memory entry for the current user.
 
-    参数:
-        category (str): 记忆分类
-        content (str): 记忆文本
-        entry_id (str): 可选，更新已有条目时传入
+    Args:
+        category (str): memory category
+        content (str): memory text
+        entry_id (str): optional; pass when updating an existing entry
 
-    返回:
-        str: 操作结果信息
+    Returns:
+        str: operation result message
     """
     try:
         uid = require_tool_uid()
         from src.memory import add_entry, update_entry
 
-        # 对话中由 Agent 调用时记为 tool；无会话上下文时才回退为 manual
+        # Record as tool when called by the Agent in a conversation; fall back to manual without session context
         source = get_tool_source_context() or MemorySourceContext(source_type="manual")
 
         if entry_id:

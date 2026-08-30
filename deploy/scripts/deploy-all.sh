@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
-# Food Mate — 本机一键部署到 Azure VM
+# Food Mate — one-click deploy from local machine to Azure VM
 #
-# 前置:
-#   1. az login 已完成
-#   2. 本机 ~/.ssh/id_rsa.pub 存在
-#   3. food-mate-api/.env 已配置 API Key
+# Prerequisites:
+#   1. az login already completed
+#   2. Local ~/.ssh/id_rsa.pub exists
+#   3. food-mate-api/.env is configured with API keys
 #
-# 用法:
+# Usage:
 #   bash deploy/scripts/deploy-all.sh
-#   PUBLIC_IP=1.2.3.4 bash deploy/scripts/deploy-all.sh   # 跳过建 VM，只更新已有机器
+#   PUBLIC_IP=1.2.3.4 bash deploy/scripts/deploy-all.sh   # Skip VM creation; only update an existing machine
 #
 
 set -euo pipefail
@@ -28,13 +28,13 @@ command -v rsync >/dev/null 2>&1 || die "未安装 rsync"
 [ -f "$SSH_KEY" ] || die "找不到 SSH 公钥: $SSH_KEY"
 [ -f "$ENV_FILE" ] || die "找不到 $ENV_FILE，请先配置 API Key"
 
-# 指定 PUBLIC_IP 时仅 SSH 部署，无需 az CLI
+# When PUBLIC_IP is set, deploy over SSH only; az CLI is not required
 if [ -z "${PUBLIC_IP:-}" ]; then
   command -v az >/dev/null 2>&1 || die "未安装 az CLI"
   az account show >/dev/null 2>&1 || die "请先运行: az login，或设置 PUBLIC_IP=<公网IP> 跳过 az"
 fi
 
-# 获取或创建 VM 公网 IP
+# Resolve or create the VM public IP
 resolve_public_ip() {
   if [ -n "${PUBLIC_IP:-}" ]; then
     log "使用指定公网 IP: $PUBLIC_IP"
@@ -51,7 +51,7 @@ resolve_public_ip() {
   [ -n "$PUBLIC_IP" ] || die "无法获取公网 IP"
 }
 
-# 等待 SSH 就绪
+# Wait until SSH is ready
 wait_ssh() {
   log "等待 SSH 就绪 ($ADMIN@$PUBLIC_IP) ..."
   for i in $(seq 1 30); do
@@ -65,7 +65,7 @@ wait_ssh() {
   die "SSH 连接超时"
 }
 
-# 同步代码到 VM
+# Sync code to the VM
 sync_code() {
   log "同步代码到 VM ..."
   rsync -avz \
@@ -79,8 +79,8 @@ sync_code() {
     "${ADMIN}@${PUBLIC_IP}" <<'REMOTE'
 set -e
 sudo mkdir -p /opt/food-mate
-# 第一步未上传 memory / .env 等运行时文件；此处必须同样排除，
-# 否则 --delete 会清掉线上记忆，或覆盖生产密钥
+# The first rsync did not upload runtime files such as memory / .env; exclude them here too,
+# otherwise --delete would wipe live memory or overwrite production secrets
 sudo rsync -a --delete \
   --exclude node_modules --exclude .next --exclude __pycache__ \
   --exclude .git --exclude venv --exclude logs --exclude memory \
@@ -89,7 +89,7 @@ sudo rsync -a --delete \
 REMOTE
 }
 
-# 在 VM 上执行 setup（幂等）
+# Run setup on the VM (idempotent)
 run_setup() {
   log "在 VM 上执行 azure-vm-setup.sh ..."
   ssh -o StrictHostKeyChecking=accept-new -i "${SSH_KEY%.pub}" \
@@ -97,7 +97,7 @@ run_setup() {
     "sudo bash /opt/food-mate/deploy/azure-vm-setup.sh"
 }
 
-# 上传本机 .env，并以 config.yaml 的 master_key 为准写回，避免 API/Proxy 密钥不一致
+# Upload local .env, then overwrite master_key from config.yaml so API/Proxy keys stay in sync
 upload_env() {
   log "上传 .env ..."
   scp -o StrictHostKeyChecking=accept-new -i "${SSH_KEY%.pub}" \
@@ -110,7 +110,7 @@ TARGET=/opt/food-mate/food-mate-api/.env
 CONFIG=/opt/food-mate/food-mate-api/config.yaml
 sudo cp /tmp/food-mate.env "$TARGET"
 
-# LiteLLM 无数据库：请求必须带 config.yaml 里的 master_key，否则报 No connected db
+# LiteLLM has no database: requests must use master_key from config.yaml, or it reports No connected db
 MK=$(sudo grep -E '^[[:space:]]*master_key:' "$CONFIG" | head -1 \
   | sed -E 's/^[[:space:]]*master_key:[[:space:]]*//' | tr -d "\"'")
 if [ -n "$MK" ]; then

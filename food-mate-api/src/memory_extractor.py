@@ -32,10 +32,10 @@ def _strip_code_fences(text: str) -> str:
     """
     Remove code fence wrappers from model output (e.g. ```markdown ... ```).
 
-    参数:
+    Args:
         text (str): Raw output
 
-    返回:
+    Returns:
         str: Clean Markdown
     """
     cleaned = text.strip()
@@ -55,10 +55,10 @@ def _has_expected_headings(user_markdown: str) -> bool:
     """
     Check whether user.md contains all expected section headings.
 
-    参数:
+    Args:
         user_markdown (str): user.md content
 
-    返回:
+    Returns:
         bool: Whether headings are present
     """
     return all(h in user_markdown for h in EXPECTED_USER_HEADINGS)
@@ -74,13 +74,13 @@ def extract_and_merge_user_from_session(
     """
     Extract preference updates from session log and merge into long-term user.md.
 
-    参数:
+    Args:
         session_content (str): Formatted recent web chat session text
         current_user_markdown (str): Current user.md content
         model (str): Model for extraction
         max_session_chars (int): Max session chars sent to LLM (tail kept)
 
-    返回:
+    Returns:
         ExtractResult: Updated user.md and changed flag
     """
     session_excerpt = (session_content or "").strip()

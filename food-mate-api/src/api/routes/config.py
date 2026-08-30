@@ -1,5 +1,5 @@
 """
-配置相关 API（RAG 模式、API Keys 读写）。
+Config APIs (RAG mode and API key read/write).
 """
 
 import os
@@ -12,7 +12,7 @@ from src.config import ENV_PATH
 
 router = APIRouter()
 
-# 允许前端读写的环境变量键
+# Env var keys the frontend is allowed to read and write
 ALLOWED_KEYS = [
     "DEEPSEEK_API_KEY",
     "OPENAI_API_KEY",
@@ -22,26 +22,26 @@ ALLOWED_KEYS = [
 
 
 class RagModeRequest(BaseModel):
-    """RAG 模式开关请求体。"""
+    """RAG mode toggle request body."""
 
     enabled: bool
 
 
 class ApiKeysRequest(BaseModel):
-    """API Keys 更新请求体。"""
+    """API keys update request body."""
 
     keys: dict[str, str]
 
 
 def _mask_value(value: str) -> str:
     """
-    对敏感值做脱敏展示。
+    Mask a sensitive value for display.
 
-    参数:
-        value (str): 原始值
+    Args:
+        value (str): original value
 
-    返回:
-        str: 脱敏后的字符串
+    Returns:
+        str: masked string
     """
     if not value:
         return ""
@@ -53,9 +53,9 @@ def _mask_value(value: str) -> str:
 @router.get("/config/rag-mode")
 async def get_rag_mode():
     """
-    获取相关记忆召回（RAG）模式状态。
+    Get related-memory recall (RAG) mode status.
 
-    返回:
+    Returns:
         dict: {rag_mode: bool}
     """
     return {"rag_mode": get_rag_mode_enabled()}
@@ -64,12 +64,12 @@ async def get_rag_mode():
 @router.put("/config/rag-mode")
 async def set_rag_mode(req: RagModeRequest):
     """
-    设置相关记忆召回（RAG）模式并持久化。
+    Set related-memory recall (RAG) mode and persist it.
 
-    参数:
-        req (RagModeRequest): 开关状态
+    Args:
+        req (RagModeRequest): toggle state
 
-    返回:
+    Returns:
         dict: {rag_mode: bool}
     """
     return {"rag_mode": set_rag_mode_enabled(req.enabled)}
@@ -78,10 +78,10 @@ async def set_rag_mode(req: RagModeRequest):
 @router.get("/config/api-keys")
 async def get_api_keys():
     """
-    读取 .env 中的 API Keys 并脱敏返回。
+    Read API keys from .env and return them masked.
 
-    返回:
-        dict: 键名到脱敏值的映射
+    Returns:
+        dict: mapping of key names to masked values
     """
     result: dict[str, str] = {}
     if ENV_PATH.exists():
@@ -101,13 +101,13 @@ async def get_api_keys():
 @router.put("/config/api-keys")
 async def set_api_keys(req: ApiKeysRequest):
     """
-    更新 .env 中变更过的 API Keys。
+    Update changed API keys in .env.
 
-    参数:
-        req (ApiKeysRequest): 键值对
+    Args:
+        req (ApiKeysRequest): key-value pairs
 
-    返回:
-        dict: 更新后脱敏的键值映射
+    Returns:
+        dict: updated masked key-value mapping
     """
     env_lines: list[str] = []
     existing: dict[str, str] = {}

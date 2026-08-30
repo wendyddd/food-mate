@@ -1,5 +1,5 @@
 """
-文件读写接口，供前端编辑器读取/保存 memory 文件。
+File read/write endpoints for the frontend editor to load and save memory files.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 class FileSaveRequest(BaseModel):
-    """保存文件请求体。"""
+    """Save-file request body."""
 
     path: str
     content: str
@@ -22,12 +22,12 @@ class FileSaveRequest(BaseModel):
 @router.get("/files")
 async def read_file(path: str, user: UserRecord = Depends(get_current_user)):
     """
-    读取 memory 目录下的文件内容。
+    Read file content under the memory directory.
 
-    参数:
-        path (str): 文件相对路径
+    Args:
+        path (str): relative file path
 
-    返回:
+    Returns:
         dict: {path, content}
     """
     normalized = path.replace("\\", "/").lstrip("./")
@@ -48,12 +48,12 @@ async def save_file(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    保存 memory 目录下的文件内容。
+    Save file content under the memory directory.
 
-    参数:
-        request (FileSaveRequest): 路径与内容
+    Args:
+        request (FileSaveRequest): path and content
 
-    返回:
+    Returns:
         dict: {path, status}
     """
     normalized = request.path.replace("\\", "/").lstrip("./")

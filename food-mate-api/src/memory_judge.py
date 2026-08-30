@@ -26,7 +26,7 @@ class JudgeResult:
     """
     Single-turn memory judgment result.
 
-    参数:
+    Attributes:
         changed (bool): Whether memory was written
         apply_result (ApplyResult): Apply operation details
     """
@@ -39,10 +39,10 @@ def _strip_json_fences(text: str) -> str:
     """
     Remove JSON code fences from model output if present.
 
-    参数:
+    Args:
         text (str): Raw output
 
-    返回:
+    Returns:
         str: Plain JSON string
     """
     cleaned = text.strip()
@@ -59,17 +59,17 @@ def _format_entries_for_prompt(entries: list) -> str:
     """
     Format current memory entries for the judge prompt.
 
-    参数:
+    Args:
         entries (list): MemoryEntry list
 
-    返回:
+    Returns:
         str: Formatted text
     """
     if not entries:
         return "(No memories yet)"
     lines = []
     for e in entries:
-        # 附带时间戳，便于冲突时判断新旧
+        # Include timestamps so conflicts can be resolved by recency
         lines.append(
             f"- id={e.id} | category={e.category} | updated_at={e.updated_at:.0f} | content={e.content}"
         )
@@ -80,11 +80,11 @@ def _format_recent_history(history: list[dict], max_turns: int = 4) -> str:
     """
     Format recent conversation turns as short text.
 
-    参数:
+    Args:
         history (list[dict]): user/assistant history
         max_turns (int): Max turns to include (user+assistant = one turn)
 
-    返回:
+    Returns:
         str: Formatted conversation
     """
     if not history:
@@ -103,10 +103,10 @@ def _parse_operations_json(raw: str) -> list[MemoryOperation]:
     """
     Parse JSON operation list from LLM output.
 
-    参数:
+    Args:
         raw (str): LLM output text
 
-    返回:
+    Returns:
         list[MemoryOperation]: Operation list
     """
     cleaned = _strip_json_fences(raw)
@@ -155,14 +155,14 @@ def judge_memory_from_turn(
     """
     Decide whether to update structured memory from this user message and apply changes.
 
-    参数:
+    Args:
         user_message (str): Current user message
         history (list[dict]): History without system messages
         uid (str): User ID
         session_id (str | None): Current session ID for source tracing
         model (str): Model to use
 
-    返回:
+    Returns:
         JudgeResult: Judgment and apply result
     """
     entries = list_entries(uid)

@@ -1,5 +1,5 @@
 """
-python_repl 工具，在独立子进程中执行 Python 代码片段并捕获输出。
+python_repl tool: run a Python snippet in an isolated subprocess and capture output.
 """
 
 import subprocess
@@ -7,9 +7,9 @@ import sys
 
 from src.tools.registry import registry
 
-# 代码执行超时时间（秒）
+# Code execution timeout (seconds)
 PYTHON_TIMEOUT = 30
-# 输出最大字符数
+# Max output characters
 MAX_OUTPUT_CHARS = 8000
 
 
@@ -29,13 +29,13 @@ MAX_OUTPUT_CHARS = 8000
 )
 def python_repl(code: str) -> str:
     """
-    在子进程中执行 Python 代码
+    Run Python code in a subprocess.
 
-    参数:
-        code (str): 要执行的 Python 代码片段
+    Args:
+        code (str): Python snippet to execute
 
-    返回:
-        str: 代码执行的 stdout 与 stderr，失败时返回错误提示
+    Returns:
+        str: stdout and stderr from the run, or an error message on failure
     """
     try:
         result = subprocess.run(

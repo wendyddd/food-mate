@@ -1,5 +1,5 @@
 """
-Agent 工具执行时的用户上下文，供 update_user / write_file 等按用户隔离写入记忆。
+User context for Agent tool execution, so update_user / write_file isolate memory by user.
 """
 
 from __future__ import annotations
@@ -19,12 +19,12 @@ _current_user_message: ContextVar[str | None] = ContextVar(
 
 def set_tool_uid(uid: str | None) -> None:
     """
-    设置当前工具执行所属用户 ID。
+    Set the user ID for the current tool execution.
 
-    参数:
-        uid (str | None): 用户 ID；None 表示清除上下文
+    Args:
+        uid (str | None): User ID; None clears the context
 
-    返回:
+    Returns:
         None
     """
     _current_uid.set(uid)
@@ -32,12 +32,12 @@ def set_tool_uid(uid: str | None) -> None:
 
 def set_tool_session_id(session_id: str | None) -> None:
     """
-    设置当前工具执行所属的聊天会话 ID。
+    Set the chat session ID for the current tool execution.
 
-    参数:
-        session_id (str | None): 会话 ID
+    Args:
+        session_id (str | None): Session ID
 
-    返回:
+    Returns:
         None
     """
     _current_session_id.set(session_id)
@@ -45,12 +45,12 @@ def set_tool_session_id(session_id: str | None) -> None:
 
 def set_tool_user_message(message: str | None) -> None:
     """
-    设置当前轮次的用户原话，供记忆来源追溯。
+    Set the current-turn user quote for memory source tracing.
 
-    参数:
-        message (str | None): 用户消息正文
+    Args:
+        message (str | None): User message body
 
-    返回:
+    Returns:
         None
     """
     _current_user_message.set(message)
@@ -63,14 +63,14 @@ def set_tool_context(
     user_message: str | None = None,
 ) -> None:
     """
-    一次性设置工具执行所需的完整上下文。
+    Set the full tool-execution context in one call.
 
-    参数:
-        uid (str | None): 用户 ID
-        session_id (str | None): 会话 ID
-        user_message (str | None): 用户原话
+    Args:
+        uid (str | None): User ID
+        session_id (str | None): Session ID
+        user_message (str | None): User quote
 
-    返回:
+    Returns:
         None
     """
     set_tool_uid(uid)
@@ -80,9 +80,9 @@ def set_tool_context(
 
 def clear_tool_context() -> None:
     """
-    清除全部工具上下文。
+    Clear all tool context.
 
-    返回:
+    Returns:
         None
     """
     set_tool_context(None, session_id=None, user_message=None)
@@ -90,20 +90,20 @@ def clear_tool_context() -> None:
 
 def get_tool_uid() -> str | None:
     """
-    获取当前工具执行所属用户 ID。
+    Get the user ID for the current tool execution.
 
-    返回:
-        str | None: 用户 ID；未设置时返回 None
+    Returns:
+        str | None: User ID; None if unset
     """
     return _current_uid.get()
 
 
 def get_tool_source_context() -> MemorySourceContext | None:
     """
-    获取当前聊天上下文对应的记忆来源信息。
+    Get memory source info for the current chat context.
 
-    返回:
-        MemorySourceContext | None: 有会话或原话时返回来源，否则 None
+    Returns:
+        MemorySourceContext | None: Source if a session or quote exists, otherwise None
     """
     session_id = _current_session_id.get()
     quote = (_current_user_message.get() or "").strip()
@@ -118,13 +118,13 @@ def get_tool_source_context() -> MemorySourceContext | None:
 
 def require_tool_uid() -> str:
     """
-    获取当前用户 ID，未登录上下文时抛出 ValueError。
+    Get the current user ID; raise ValueError if no login context is set.
 
-    返回:
-        str: 用户 ID
+    Returns:
+        str: User ID
 
     Raises:
-        ValueError: 未设置用户上下文
+        ValueError: User context is not set
     """
     uid = get_tool_uid()
     if not uid:

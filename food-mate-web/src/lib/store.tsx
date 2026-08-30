@@ -105,11 +105,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rawMessages, setRawMessages] = useState<RawMessage[] | null>(null);
   const [memoryToast, setMemoryToast] = useState<string | null>(null);
   const abortRef = useRef(false);
-  /** 同步锁，避免连点导致同一轮发出两次请求、弹两次 Toast */
+  /** Sync lock to prevent double-clicks from sending two requests and showing two toasts in one turn */
   const streamingRef = useRef(false);
-  /** 同一轮对话只展示一次记忆更新提示 */
+  /** Show the memory-update toast at most once per conversation turn */
   const memoryToastShownRef = useRef(false);
-  /** 本轮记忆更新 Toast 文案，待回复完全结束后再展示 */
+  /** Pending memory-update toast copy; shown after the reply fully finishes */
   const pendingMemoryToastRef = useRef<string | null>(null);
 
   const dismissMemoryToast = useCallback(() => setMemoryToast(null), []);
@@ -268,7 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         await apiDeleteSession(id);
       } catch {
-        // 后端删除失败时保留侧边栏条目，避免 UI 与磁盘状态不一致
+        // Keep the sidebar item if backend delete fails, so UI stays in sync with disk
         return;
       }
       setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -339,21 +339,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Send message ───────────────────────────────────
 
   const currentAssistantIdRef = useRef("");
-  /** 每条 assistant 消息待显示的文本缓冲（打字机效果） */
+  /** Per-assistant-message text buffer for the typewriter effect */
   const pendingTextRef = useRef<Map<string, string>>(new Map());
   const typewriterRafRef = useRef<number | null>(null);
-  /** SSE 是否已结束；结束后继续冲刷缓冲直至清空 */
+  /** Whether SSE has finished; after that, keep flushing the buffer until empty */
   const sseFinishedRef = useRef(false);
   const typewriterResolveRef = useRef<(() => void) | null>(null);
 
   /**
-   * 计算本帧应从缓冲区吐出的字符数（积压越多吐得越快）。
+   * How many characters to emit from the buffer this frame (faster when backlog is larger).
    *
-   * 参数:
-   *   pendingLen (number): 当前缓冲字符数
-   *
-   * 返回:
-   *   number: 本帧吐出字符数
+   * @param pendingLen - Current buffered character count
+   * @returns Number of characters to emit this frame
    */
   const charsPerFrame = useCallback((pendingLen: number): number => {
     if (pendingLen <= 0) return 0;
@@ -364,10 +361,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * 将指定消息缓冲中的全部剩余文本立即写入 UI。
+   * Immediately flush remaining buffered text for a message into the UI.
    *
-   * 参数:
-   *   msgId (string | null): 消息 ID；为 null 时冲刷全部
+   * @param msgId - Message ID; pass null to flush all
    */
   const flushPendingText = useCallback((msgId: string | null = null) => {
     const pending = pendingTextRef.current;
@@ -401,7 +397,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * 停止打字机 RAF 循环。
+   * Stop the typewriter RAF loop.
    */
   const stopTypewriter = useCallback(() => {
     if (typewriterRafRef.current !== null) {
@@ -411,7 +407,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * 启动或继续打字机 RAF；缓冲清空且 SSE 结束后 resolve 等待方。
+   * Start or continue the typewriter RAF; resolve waiters when the buffer is empty and SSE has finished.
    */
   const ensureTypewriter = useCallback(() => {
     if (typewriterRafRef.current !== null) return;
@@ -464,7 +460,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         resolve?.();
       }
 
-      // drained 仅用于避免 unused 告警时保留可读性
+      // drained is kept for readability and to avoid an unused-variable warning
       void drained;
     };
 
@@ -472,11 +468,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [charsPerFrame]);
 
   /**
-   * 向指定消息追加待显示文本并启动打字机。
+   * Append pending text to a message and start the typewriter.
    *
-   * 参数:
-   *   msgId (string): 助手消息 ID
-   *   text (string): 新增文本片段
+   * @param msgId - Assistant message ID
+   * @param text - New text fragment
    */
   const enqueueTypewriter = useCallback(
     (msgId: string, text: string) => {
@@ -489,10 +484,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * 等待打字机缓冲全部冲刷完成（SSE 已结束后调用）。
+   * Wait until the typewriter buffer is fully flushed (call after SSE has finished).
    *
-   * 返回:
-   *   Promise<void>
+   * @returns Promise that resolves when the buffer is empty
    */
   const waitTypewriterDrain = useCallback((): Promise<void> => {
     if (pendingTextRef.current.size === 0) {
@@ -504,7 +498,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [ensureTypewriter]);
 
-  // 组件卸载时清理打字机 RAF
+  // Clean up the typewriter RAF on unmount
   useEffect(() => {
     return () => {
       stopTypewriter();
@@ -594,7 +588,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               added_ids?: string[];
               updated_ids?: string[];
             };
-            // 先缓存提示文案，等本轮回复完全结束后再展示 Toast
+            // Cache the toast copy first; show it after this turn's reply fully finishes
             if (
               isShowRef.current &&
               updateData.changed &&
@@ -629,7 +623,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (event.event === "new_response") {
-            // 切换到下一段前，冲刷当前段缓冲，避免文字落到错误气泡
+            // Flush the current segment buffer before switching, so text does not land in the wrong bubble
             flushPendingText(currentAssistantIdRef.current);
             const newId = `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
             currentAssistantIdRef.current = newId;

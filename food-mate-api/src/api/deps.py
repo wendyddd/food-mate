@@ -1,5 +1,5 @@
 """
-FastAPI 依赖注入，提供 Web API 用户鉴权。
+FastAPI dependency injection for Web API user authentication.
 """
 
 from fastapi import Header, HTTPException
@@ -11,16 +11,16 @@ async def get_current_user(
     x_user_session: str | None = Header(default=None, alias="X-User-Session"),
 ) -> UserRecord:
     """
-    从请求头解析并校验当前登录用户。
+    Parse and validate the current logged-in user from request headers.
 
-    参数:
-        x_user_session (str | None): URL session 标识
+    Args:
+        x_user_session (str | None): URL session identifier
 
-    返回:
-        UserRecord: 当前用户记录
+    Returns:
+        UserRecord: current user record
 
     Raises:
-        HTTPException: 未登录或 session 无效
+        HTTPException: not logged in or session is invalid
     """
     if not x_user_session or not x_user_session.strip():
         raise HTTPException(status_code=401, detail="Missing user session")

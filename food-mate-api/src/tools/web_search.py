@@ -1,5 +1,5 @@
 """
-web_search 工具，调用 Tavily 搜索 API 返回与查询相关的网页结果。
+web_search tool: call the Tavily search API and return results related to the query.
 """
 
 import os
@@ -8,11 +8,11 @@ import requests
 
 from src.tools.registry import registry
 
-# Tavily 搜索接口地址
+# Tavily search endpoint
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
-# 请求超时时间（秒）
+# Request timeout (seconds)
 SEARCH_TIMEOUT = 20
-# 默认返回结果数量
+# Default number of results
 DEFAULT_MAX_RESULTS = 5
 
 
@@ -36,14 +36,14 @@ DEFAULT_MAX_RESULTS = 5
 )
 def web_search(query: str, max_results: int = DEFAULT_MAX_RESULTS) -> str:
     """
-    调用 Tavily API 进行联网搜索
+    Search the web via the Tavily API.
 
-    参数:
-        query (str): 搜索关键词或问题
-        max_results (int): 返回结果数量，默认 5
+    Args:
+        query (str): search keywords or question
+        max_results (int): number of results to return, default 5
 
-    返回:
-        str: 格式化的搜索结果（标题 + 摘要 + 链接），失败时返回错误提示
+    Returns:
+        str: formatted results (title + snippet + link), or an error message on failure
     """
     api_key = os.environ.get("TAVILY_API_KEY")
     if not api_key:
@@ -64,7 +64,7 @@ def web_search(query: str, max_results: int = DEFAULT_MAX_RESULTS) -> str:
     except Exception as e:
         return f"[web_search 失败] {e}"
 
-    # 组装可读的搜索结果文本
+    # Assemble a readable search-result text
     parts: list[str] = []
     answer = data.get("answer")
     if answer:

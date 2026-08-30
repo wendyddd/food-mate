@@ -11,7 +11,7 @@ WorkingDirectory=/opt/food-mate/food-mate-web
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=127.0.0.1
-# 生产构建不注入跨端口 API；浏览器走同域 /api
+# Production build does not inject a cross-port API URL; the browser uses same-origin /api
 ExecStart=/usr/bin/npm run start -- -H 127.0.0.1 -p 3000
 Restart=on-failure
 RestartSec=5

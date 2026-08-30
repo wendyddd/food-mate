@@ -1,5 +1,5 @@
 """
-Web 聊天会话 CRUD API。
+Web chat session CRUD API.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -23,7 +23,7 @@ router = APIRouter()
 
 
 class RenameRequest(BaseModel):
-    """重命名会话请求体。"""
+    """Rename-session request body."""
 
     title: str
 
@@ -31,9 +31,9 @@ class RenameRequest(BaseModel):
 @router.get("/sessions")
 async def api_list_sessions(user: UserRecord = Depends(get_current_user)):
     """
-    列出当前用户的所有 Web 聊天会话。
+    List all Web chat sessions for the current user.
 
-    返回:
+    Returns:
         dict: {sessions: [...]}
     """
     return {"sessions": list_sessions(user.uid)}
@@ -42,10 +42,10 @@ async def api_list_sessions(user: UserRecord = Depends(get_current_user)):
 @router.post("/sessions")
 async def api_create_session(user: UserRecord = Depends(get_current_user)):
     """
-    创建新的空会话。
+    Create a new empty session.
 
-    返回:
-        dict: 会话元信息
+    Returns:
+        dict: session metadata
     """
     return create_session(user.uid)
 
@@ -57,14 +57,14 @@ async def api_rename_session(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    重命名会话。
+    Rename a session.
 
-    参数:
-        session_id (str): 会话 ID
-        req (RenameRequest): 新标题
+    Args:
+        session_id (str): session ID
+        req (RenameRequest): new title
 
-    返回:
-        dict: 更新后的 id 与 title
+    Returns:
+        dict: updated id and title
     """
     try:
         rename_session(user.uid, session_id, req.title)
@@ -79,13 +79,13 @@ async def api_delete_session(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    删除会话。
+    Delete a session.
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: 删除状态
+    Returns:
+        dict: deletion status
     """
     if not delete_session(user.uid, session_id):
         raise HTTPException(status_code=404, detail="Session not found")
@@ -98,13 +98,13 @@ async def api_get_raw_messages(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    获取含 system prompt 的完整原始消息列表。
+    Get the full raw message list including the system prompt.
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: session_id、title、messages
+    Returns:
+        dict: session_id, title, messages
     """
     data = get_raw_messages(user.uid, session_id)
     system_prompt = build_agent_system_prompt(user.uid)
@@ -124,13 +124,13 @@ async def api_get_session_history(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    获取会话展示用历史（不含 system prompt，含 tool_calls）。
+    Get display history for a session (no system prompt; includes tool_calls).
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: session_id、messages
+    Returns:
+        dict: session_id, messages
     """
     return {
         "session_id": session_id,
@@ -144,13 +144,13 @@ async def api_generate_title(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    根据首轮对话用 LLM 生成短标题。
+    Generate a short title from the first turn via LLM.
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: session_id、title
+    Returns:
+        dict: session_id, title
     """
     messages = load_history(user.uid, session_id)
     if not messages:
@@ -198,13 +198,13 @@ async def api_compress_session(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    压缩会话历史（MVP stub：不做实际压缩）。
+    Compress session history (MVP stub: no actual compression).
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: archived_count、remaining_count
+    Returns:
+        dict: archived_count, remaining_count
     """
     count = len(load_history(user.uid, session_id))
     return {"archived_count": 0, "remaining_count": count}

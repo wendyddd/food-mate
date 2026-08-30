@@ -59,20 +59,17 @@ function CodeBlock({
 
 interface Props {
   message: ChatMessageType;
-  /** 当前消息是否处于流式输出中（仅最后一条 assistant 消息为 true） */
+  /** Whether this message is currently streaming (true only for the last assistant message) */
   isActiveStreaming?: boolean;
-  /** 本条回答下方展示的追问建议（仅最新完成轮次） */
+  /** Follow-up suggestions shown under this reply (latest completed turn only) */
   suggestedQuestions?: string[];
 }
 
 /**
- * 将消息时间戳格式化为「日期 + 时间」。
+ * Format a message timestamp as date + time.
  *
- * 参数:
- *   ts (number): 毫秒级 Unix 时间戳
- *
- * 返回:
- *   string: 形如 `2026-08-14 20:24` 的本地时间文案
+ * @param ts - Unix timestamp in milliseconds
+ * @returns Local time string such as `2026-08-14 20:24`
  */
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -113,14 +110,14 @@ export default function ChatMessage({
       ? suggestedQuestions
       : null;
 
-  /** 工具调用已完成但无文本内容（new_response 前的中间态），不应展示加载动画 */
+  /** Tool calls finished with no text yet (intermediate state before new_response); do not show a loading animation */
   const isToolOnlySegment =
     isShow &&
     !displayContent &&
     !!message.toolCalls?.length &&
     message.toolCalls.every((tc) => tc.status === "done");
 
-  /** 仅在流式输出且等待内容时展示 typing 指示器 */
+  /** Show the typing indicator only while streaming and waiting for content */
   const showTypingIndicator =
     isActiveStreaming && !displayContent && !isToolOnlySegment;
 
@@ -154,14 +151,14 @@ export default function ChatMessage({
             </div>
           </div>
         ) : (
-          /* Assistant message — left-aligned，Logo 与首行文本顶部对齐 */
+          /* Assistant message — left-aligned; Logo aligns with the top of the first text line */
           <div className="flex items-start gap-3 max-w-[85%]">
             <Logo
               size={32}
               className="shrink-0 rounded-full mt-0.5 shadow-sm"
             />
             <div className="flex-1 min-w-0">
-              {/* Tool calls — 仅 is_show=1 时展示 */}
+              {/* Tool calls — shown only when is_show=1 */}
               {isShow && message.toolCalls && message.toolCalls.length > 0 && (
                 <ThoughtChain toolCalls={message.toolCalls} />
               )}
@@ -179,7 +176,7 @@ export default function ChatMessage({
                       color: "var(--text-primary)",
                     }}
                   >
-                    {/* 流式阶段用纯文本，避免 ReactMarkdown 频繁拆建 DOM 触发 removeChild */}
+                    {/* Use plain text while streaming to avoid ReactMarkdown rebuilding DOM and triggering removeChild */}
                     <div className="markdown-content">
                       {isActiveStreaming ? (
                         <div className="whitespace-pre-wrap">

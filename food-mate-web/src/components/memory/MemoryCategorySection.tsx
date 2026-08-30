@@ -15,14 +15,14 @@ interface Props {
   onUpdate: (id: string, content: string, category: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   defaultOpen?: boolean;
-  /** 需要视觉高亮的记忆条目 id */
+  /** Memory entry id that should be visually highlighted */
   highlightEntryId?: string | null;
-  /** URL 中的目标条目 id（用于首次展开所在分类） */
+  /** Target entry id from the URL (used to expand its category on first visit) */
   focusEntryId?: string | null;
 }
 
 /**
- * 按分区展示记忆条目；展开后以普通卡片网格呈现。
+ * Show memory entries by section; expanded view uses a plain card grid.
  */
 export default function MemoryCategorySection({
   category,
@@ -52,7 +52,7 @@ export default function MemoryCategorySection({
   const CatIcon = visual.icon;
 
   /**
-   * 从聊天引用跳转时，展开目标条目所在分类。
+   * When jumping from a chat citation, expand the category that contains the target entry.
    */
   useEffect(() => {
     if (containsTarget) setOpen(true);

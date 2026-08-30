@@ -1,5 +1,5 @@
 """
-Token 统计 API，供 Raw Context 面板展示上下文占用。
+Token-count API for the Raw Context panel to show context usage.
 """
 
 import tiktoken
@@ -17,13 +17,13 @@ _encoder = tiktoken.get_encoding("cl100k_base")
 
 def _count_tokens(text: str) -> int:
     """
-    使用 cl100k_base 编码统计文本 token 数。
+    Count tokens in text using the cl100k_base encoding.
 
-    参数:
-        text (str): 待统计文本
+    Args:
+        text (str): text to count
 
-    返回:
-        int: token 数量
+    Returns:
+        int: token count
     """
     return len(_encoder.encode(text))
 
@@ -34,13 +34,13 @@ async def api_get_session_token_count(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    统计会话上下文 token 数：system prompt + 全部消息 content。
+    Count session context tokens: system prompt + all message contents.
 
-    参数:
-        session_id (str): 会话 ID
+    Args:
+        session_id (str): session ID
 
-    返回:
-        dict: system_tokens、message_tokens、total_tokens
+    Returns:
+        dict: system_tokens, message_tokens, total_tokens
     """
     system_prompt = build_agent_system_prompt(user.uid)
     system_tokens = _count_tokens(system_prompt)

@@ -1,5 +1,5 @@
 """
-fetch_url 工具，使用 requests 抓取网页并通过 beautifulsoup4 提取正文文本。
+fetch_url tool: fetch a page with requests and extract body text via beautifulsoup4.
 """
 
 import requests
@@ -7,11 +7,11 @@ from bs4 import BeautifulSoup
 
 from src.tools.registry import registry
 
-# 请求超时时间（秒）
+# Request timeout (seconds)
 FETCH_TIMEOUT = 20
-# 正文最大字符数
+# Max body characters
 MAX_CONTENT_CHARS = 10000
-# 模拟浏览器 UA，降低被拦截概率
+# Mimic a browser UA to reduce blocking
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -36,13 +36,13 @@ DEFAULT_HEADERS = {
 )
 def fetch_url(url: str) -> str:
     """
-    抓取网页并提取正文文本
+    Fetch a web page and extract body text.
 
-    参数:
-        url (str): 网页 URL
+    Args:
+        url (str): page URL
 
-    返回:
-        str: 提取出的网页正文文本，失败时返回错误提示
+    Returns:
+        str: extracted page text, or an error message on failure
     """
     try:
         resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=FETCH_TIMEOUT)
@@ -52,15 +52,15 @@ def fetch_url(url: str) -> str:
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # 移除脚本、样式等无关标签
+    # Remove scripts, styles, and other non-content tags
     for tag in soup(["script", "style", "noscript", "header", "footer", "nav"]):
         tag.decompose()
 
-    # 提取标题与正文文本
+    # Extract title and body text
     title = soup.title.string.strip() if soup.title and soup.title.string else ""
     text = soup.get_text(separator="\n", strip=True)
 
-    # 压缩多余空行
+    # Collapse extra blank lines
     lines = [line for line in text.splitlines() if line.strip()]
     content = "\n".join(lines)
 

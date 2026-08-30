@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-# 稳定分类 id（与 user.md ## 标题一致；存储与 API 均用此英文名）
+# Stable category ids (match user.md ## headings; storage and API use these English names)
 MEMORY_CATEGORIES: list[str] = [
     "Health & Dietary Restrictions",
     "Taste & Habits",
@@ -16,7 +16,7 @@ MEMORY_CATEGORIES: list[str] = [
     "Other",
 ]
 
-# 分类含义（供 Judge / Extractor / 工具描述使用）
+# Category meanings (used by Judge / Extractor / tool descriptions)
 CATEGORY_GUIDANCE: dict[str, str] = {
     "Health & Dietary Restrictions": (
         "Allergies, religious diets, absolute avoidances, and health-related goals "
@@ -39,7 +39,7 @@ CATEGORY_GUIDANCE: dict[str, str] = {
     ),
 }
 
-# 展示文案（国际化；存储仍用 MEMORY_CATEGORIES 英文名）
+# Display labels (i18n; storage still uses MEMORY_CATEGORIES English names)
 CATEGORY_LABELS: dict[str, dict[str, str]] = {
     "Health & Dietary Restrictions": {
         "en": "Health & Dietary Restrictions",
@@ -63,21 +63,21 @@ CATEGORY_LABELS: dict[str, dict[str, str]] = {
     },
 }
 
-# 旧分类名（中/英）→ 新英文分类
+# Legacy category names (Chinese/English) → current English categories
 LEGACY_CATEGORY_MAP: dict[str, str] = {
-    # 上一版英文五类
+    # Previous English five-category set
     "Taste Preferences": "Taste & Habits",
     "Dietary Restrictions & Allergies": "Health & Dietary Restrictions",
     "Cooking Skill & Kitchen": "Kitchen & Budget",
     "Favorite Cuisines": "Taste & Habits",
     "Dietary Goals": "Health & Dietary Restrictions",
-    # 更早的中文五类
+    # Earlier Chinese five-category set
     "口味偏好": "Taste & Habits",
     "忌口与过敏": "Health & Dietary Restrictions",
     "烹饪水平与厨房条件": "Kitchen & Budget",
     "喜欢的菜系": "Taste & Habits",
     "饮食目标": "Health & Dietary Restrictions",
-    # 新五类中文展示名 → 存储用英文
+    # New five-category Chinese display names → English storage names
     "健康与饮食限制": "Health & Dietary Restrictions",
     "口味与习惯": "Taste & Habits",
     "家人与场景": "Household & Context",
@@ -104,13 +104,13 @@ MemorySourceType = Literal["judge", "manual", "extract", "tool", "migrate"]
 
 def normalize_category(category: str) -> str:
     """
-    将分类名规范为当前英文集合，兼容旧中/英文类名。
+    Normalize a category name to the current English set, including legacy names.
 
-    参数:
-        category (str): 原始分类字符串
+    Args:
+        category (str): Raw category string
 
-    返回:
-        str: 规范化后的分类名
+    Returns:
+        str: Normalized category name
     """
     if category in MEMORY_CATEGORIES:
         return category
@@ -119,14 +119,14 @@ def normalize_category(category: str) -> str:
 
 def category_label(category: str, locale: str = "en") -> str:
     """
-    按语言返回分类展示文案。
+    Return the category display label for a locale.
 
-    参数:
-        category (str): 分类 id（英文存储名）
-        locale (str): 语言代码，如 en / zh / zh-CN
+    Args:
+        category (str): Category id (English storage name)
+        locale (str): Language code, e.g. en / zh / zh-CN
 
-    返回:
-        str: 展示用标签
+    Returns:
+        str: Display label
     """
     lang = "zh" if locale.lower().startswith("zh") else "en"
     labels = CATEGORY_LABELS.get(normalize_category(category), {})
@@ -135,10 +135,10 @@ def category_label(category: str, locale: str = "en") -> str:
 
 def categories_prompt_block() -> str:
     """
-    生成带含义说明的分类列表，供 Judge / Extractor prompt 使用。
+    Build a category list with meanings for Judge / Extractor prompts.
 
-    返回:
-        str: 多行分类说明文本
+    Returns:
+        str: Multi-line category guidance text
     """
     lines = []
     for cat in MEMORY_CATEGORIES:
@@ -149,17 +149,17 @@ def categories_prompt_block() -> str:
 @dataclass
 class MemoryRevision:
     """
-    单次记忆修改记录（保存被替换前的快照与变更时间）。
+    One memory revision (snapshot before the change and when it happened).
 
-    参数:
-        content (str): 修改前的正文
-        category (str): 修改前的分类
-        changed_at (float): 本次修改发生的时间戳
-        new_content (str): 修改后的正文
-        new_category (str): 修改后的分类
-        source_type (str | None): 触发本次修改的来源（manual/judge/…）
-        source_session_id (str | None): 触发本次修改的会话 ID
-        source_quote (str | None): 触发本次修改的用户原话摘录
+    Attributes:
+        content (str): Content before the change
+        category (str): Category before the change
+        changed_at (float): Timestamp of this change
+        new_content (str): Content after the change
+        new_category (str): Category after the change
+        source_type (str | None): Source that triggered this change (manual/judge/…)
+        source_session_id (str | None): Session ID that triggered this change
+        source_quote (str | None): User quote excerpt that triggered this change
     """
 
     content: str
@@ -173,10 +173,10 @@ class MemoryRevision:
 
     def to_dict(self) -> dict[str, Any]:
         """
-        序列化为可写入 JSON 的字典。
+        Serialize to a JSON-storable dict.
 
-        返回:
-            dict: 修改记录字典
+        Returns:
+            dict: Revision dict
         """
         data: dict[str, Any] = {
             "content": self.content,
@@ -196,13 +196,13 @@ class MemoryRevision:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> MemoryRevision:
         """
-        从字典反序列化修改记录。
+        Deserialize a revision from a dict.
 
-        参数:
-            data (dict): 存储字典
+        Args:
+            data (dict): Stored dict
 
-        返回:
-            MemoryRevision: 修改记录实例
+        Returns:
+            MemoryRevision: Revision instance
         """
         return cls(
             content=str(data.get("content", "")),
@@ -223,7 +223,7 @@ class MemoryEntry:
     """
     Single structured memory entry.
 
-    参数:
+    Attributes:
         id (str): Stable entry ID, format mem_xxxxxx
         category (str): Category name
         content (str): Memory text
@@ -232,7 +232,7 @@ class MemoryEntry:
         source_type (str | None): Source type (judge/manual/extract/tool/migrate)
         source_session_id (str | None): Source session ID
         source_quote (str | None): User quote excerpt
-        revisions (list[MemoryRevision]): 历史修改记录（旧→新）
+        revisions (list[MemoryRevision]): History of revisions (old → new)
     """
 
     id: str
@@ -249,7 +249,7 @@ class MemoryEntry:
         """
         Serialize to a JSON-storable dict.
 
-        返回:
+        Returns:
             dict: Entry dict
         """
         data: dict[str, Any] = {
@@ -274,10 +274,10 @@ class MemoryEntry:
         """
         Deserialize from dict.
 
-        参数:
+        Args:
             data (dict): Stored dict
 
-        返回:
+        Returns:
             MemoryEntry: Memory entry instance
         """
         revisions_raw = data.get("revisions") or []
@@ -304,7 +304,7 @@ class MemoryStore:
     """
     User memory store root structure (maps to user.json).
 
-    参数:
+    Attributes:
         version (int): Schema version
         entries (list[MemoryEntry]): All memory entries
     """
@@ -316,7 +316,7 @@ class MemoryStore:
         """
         Serialize to a JSON-storable dict.
 
-        返回:
+        Returns:
             dict: Store structure
         """
         return {
@@ -329,10 +329,10 @@ class MemoryStore:
         """
         Deserialize store from dict.
 
-        参数:
+        Args:
             data (dict): JSON data
 
-        返回:
+        Returns:
             MemoryStore: Store instance
         """
         entries = [MemoryEntry.from_dict(e) for e in data.get("entries", [])]
@@ -344,7 +344,7 @@ class MemorySourceContext:
     """
     Source context when writing memory.
 
-    参数:
+    Attributes:
         source_type (str): Source type
         source_session_id (str | None): Source session ID
         source_quote (str | None): User quote excerpt
@@ -360,7 +360,7 @@ class MemoryOperation:
     """
     Memory change operation (for judge / extract).
 
-    参数:
+    Attributes:
         action (str): add / update / delete
         category (str | None): Category for add
         content (str | None): Content for add/update
@@ -377,10 +377,10 @@ class MemoryOperation:
         """
         Parse operation from LLM JSON output.
 
-        参数:
+        Args:
             data (dict): Operation dict
 
-        返回:
+        Returns:
             MemoryOperation: Operation instance
         """
         return cls(
@@ -396,7 +396,7 @@ class ApplyResult:
     """
     Result of applying a batch of memory operations.
 
-    参数:
+    Attributes:
         changed (bool): Whether anything changed
         entries (list[MemoryEntry]): All entries after change
         added_ids (list[str]): Added entry IDs

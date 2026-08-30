@@ -7,12 +7,12 @@ import { useT } from "@/lib/i18n";
 interface Props {
   category: string;
   onSubmit: (category: string, content: string) => Promise<void>;
-  /** 用于入场动画错峰，默认接在已有卡片之后 */
+  /** Stagger entrance animation; defaults to after existing cards */
   index?: number;
 }
 
 /**
- * 新增记忆：以与条目一致的卡片样式出现在网格末尾。
+ * Add memory: appears at the end of the grid in the same card style as entries.
  */
 export default function MemoryEntryForm({
   category,

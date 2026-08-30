@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 /**
- * 根路径重定向到登录页。
+ * Root path redirects to the login page.
  */
 export default function RootPage() {
   redirect("/login");

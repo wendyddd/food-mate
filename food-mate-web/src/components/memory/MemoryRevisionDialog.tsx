@@ -12,22 +12,19 @@ import type { MemoryCategory } from "@/lib/types";
 interface Props {
   revisions: MemoryRevision[];
   onClose: () => void;
-  /** 条目级来源会话，作修订记录缺省回退 */
+  /** Entry-level source session, used as a fallback for revision records */
   fallbackSessionId?: string | null;
-  /** 条目级原话摘录，作修订记录缺省回退 */
+  /** Entry-level original quote, used as a fallback for revision records */
   fallbackQuote?: string | null;
 }
 
 /**
- * 构造跳转到聊天页并定位原话的链接。
+ * Build a link to the chat page that locates the original quote.
  *
- * 参数:
- * userSession (string): 当前用户会话路径段
- * sessionId (string | null | undefined): 来源会话 ID
- * quote (string | null | undefined): 原话摘录
- *
- * 返回:
- * string | null: 可跳转 href；信息不足则为 null
+ * @param userSession - Current user session path segment
+ * @param sessionId - Source session ID
+ * @param quote - Original quote excerpt
+ * @returns Navigable href, or null if information is insufficient
  */
 function buildSessionHref(
   userSession: string | null | undefined,
@@ -41,9 +38,9 @@ function buildSessionHref(
 }
 
 /**
- * 记忆修改记录弹层：展示每次修改的前后内容与时间。
- * 通过 Portal 挂到 body，避免被卡片 transform / 分区 overflow 裁切。
- * 「聊天记录」可点击跳转到触发该次修改的对话位置。
+ * Memory revision dialog: before/after content and time for each change.
+ * Portaled to body so card transform / section overflow cannot clip it.
+ * "Chat history" links jump to the conversation that triggered that revision.
  */
 export default function MemoryRevisionDialog({
   revisions,
@@ -55,13 +52,10 @@ export default function MemoryRevisionDialog({
   const { userSession } = useAuth();
 
   /**
-   * 格式化时间戳为本地可读字符串。
+   * Format a timestamp as a local readable string.
    *
-   * 参数:
-   * ts (number): Unix 秒级时间戳
-   *
-   * 返回:
-   * string: 本地化时间文案
+   * @param ts - Unix timestamp in seconds
+   * @returns Localized time string
    */
   const formatDate = (ts: number) =>
     new Date(ts * 1000).toLocaleString(undefined, {
@@ -72,7 +66,7 @@ export default function MemoryRevisionDialog({
       minute: "2-digit",
     });
 
-  // 新→旧展示
+  // Newest first
   const ordered = [...revisions].reverse();
 
   const dialog = (

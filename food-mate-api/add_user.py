@@ -1,16 +1,16 @@
 """
-向 user_info.csv 添加用户的命令行脚本。
+CLI script to add a user to user_info.csv.
 
-# 全部随机生成（uid、pwd、session、last_time）
+# Generate everything at random (uid, pwd, session, last_time)
 /opt/miniconda3/envs/py311/bin/python add_user.py
 
-# 指定 uid，pwd 随机
+# Specify uid, random pwd
 /opt/miniconda3/envs/py311/bin/python add_user.py --uid 123456
 
-# 指定 pwd，uid 随机
+# Specify pwd, random uid
 /opt/miniconda3/envs/py311/bin/python add_user.py --pwd MyPass8x
 
-# 全部指定
+# Specify both
 /opt/miniconda3/envs/py311/bin/python add_user.py --uid 123456 --pwd MyPass8x
 
 """
@@ -25,12 +25,12 @@ from src.user_auth import add_user
 
 def main() -> None:
     """
-    解析命令行参数并添加用户。
+    Parse CLI args and add a user.
 
-    参数:
-        无（通过 argparse 读取 --uid、--pwd）
+    Args:
+        None (reads --uid and --pwd via argparse)
 
-    返回:
+    Returns:
         None
     """
     parser = argparse.ArgumentParser(

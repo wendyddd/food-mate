@@ -329,7 +329,7 @@ body {
   position: relative;
 }
 
-/* ── 记忆普通卡片 ───────────────────────────────────────── */
+/* ── Memory entry card ───────────────────────────────── */
 @keyframes memory-card-in {
   from {
     opacity: 0;

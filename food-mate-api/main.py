@@ -1,5 +1,5 @@
 """
-FoodMate Agent 的命令行入口，负责启动 Proxy、渲染对话并处理斜杠命令。
+CLI entry for FoodMate Agent: start Proxy, render chat, and handle slash commands.
 """
 
 import getpass
@@ -15,7 +15,7 @@ from src.user_auth import authenticate, touch_last_login
 
 console = Console()
 
-# 帮助信息文本
+# Help text
 HELP_TEXT = """可用命令：
   /model <名称>   切换模型（可选：{models}）
   /reset          清空当前对话上下文（保留长期记忆）
@@ -27,30 +27,30 @@ HELP_TEXT = """可用命令：
 
 def print_tool_event(label: str, payload: str) -> None:
     """
-    打印工具调用过程事件
+    Print a tool-call progress event.
 
-    参数:
-        label (str): 工具名称或带"-> 结果"后缀的标签
-        payload (str): 参数或执行结果文本
+    Args:
+        label (str): Tool name, or a label with a "-> result" suffix
+        payload (str): Arguments or result text
 
-    返回:
+    Returns:
         None
     """
-    # 结果可能较长，做展示截断
+    # Results can be long; truncate for display
     shown = payload if len(payload) <= 500 else payload[:500] + " ...[截断]"
     console.print(f"[dim]🔧 {label}: {shown}[/dim]")
 
 
 def handle_command(cmd: str, agent: Agent) -> bool:
     """
-    处理斜杠命令
+    Handle a slash command.
 
-    参数:
-        cmd (str): 用户输入的命令（以 / 开头）
-        agent (Agent): 当前 Agent 实例
+    Args:
+        cmd (str): User command (starts with /)
+        agent (Agent): Current Agent instance
 
-    返回:
-        bool: True 表示应继续运行，False 表示应退出程序
+    Returns:
+        bool: True to keep running, False to exit
     """
     parts = cmd.strip().split(maxsplit=1)
     name = parts[0].lower()
@@ -91,13 +91,13 @@ def handle_command(cmd: str, agent: Agent) -> bool:
 
 def prompt_login() -> str:
     """
-    命令行登录，校验 uid 与密码。
+    CLI login: verify uid and password.
 
-    返回:
-        str: 登录成功后的用户 ID
+    Returns:
+        str: User ID after successful login
 
     Raises:
-        SystemExit: 登录失败或用户取消
+        SystemExit: Login failed or user cancelled
     """
     console.print("[bold]请先登录[/bold]（凭据来自 data/user_info.csv）")
     try:
@@ -119,9 +119,9 @@ def prompt_login() -> str:
 
 def main() -> None:
     """
-    程序主入口：启动 Proxy、初始化 Agent 并进入对话循环
+    Program entry: start Proxy, initialize Agent, and enter the chat loop.
 
-    返回:
+    Returns:
         None
     """
     console.print(
@@ -133,7 +133,7 @@ def main() -> None:
         )
     )
 
-    # 启动 LiteLLM Proxy 网关
+    # Start LiteLLM Proxy gateway
     try:
         start_proxy()
     except Exception as e:
@@ -157,14 +157,14 @@ def main() -> None:
         if not user_input:
             continue
 
-        # 斜杠命令处理
+        # Slash-command handling
         if user_input.startswith("/"):
             if not handle_command(user_input, agent):
                 console.print("[cyan]再见，记得好好吃饭！[/cyan]")
                 break
             continue
 
-        # 正常对话
+        # Normal conversation
         try:
             console.print("[bold cyan]FoodMate >[/bold cyan]")
             reply = agent.invoke(

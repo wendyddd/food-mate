@@ -1,5 +1,5 @@
 """
-POST /api/chat — SSE 流式对话接口。
+POST /api/chat — SSE streaming chat endpoint.
 """
 
 import asyncio
@@ -35,7 +35,7 @@ MEMORY_JUDGE_TIMEOUT = 30.0
 
 
 class ChatRequest(BaseModel):
-    """聊天请求体。"""
+    """Chat request body."""
 
     message: str
     session_id: str = "default"
@@ -49,15 +49,15 @@ async def _judge_and_apply_memory(
     session_id: str,
 ) -> dict[str, Any]:
     """
-    在后台并行执行本轮记忆判断并写入。
+    Run this turn's memory judgment in the background and persist results.
 
-    参数:
-        uid (str): 用户 ID
-        message (str): 用户消息
-        history (list): 历史消息
-        session_id (str): 当前会话 ID
+    Args:
+        uid (str): user ID
+        message (str): user message
+        history (list): conversation history
+        session_id (str): current session ID
 
-    返回:
+    Returns:
         dict: {changed, added_ids, updated_ids, deleted_ids, entries}
     """
     t0 = time.perf_counter()
@@ -106,14 +106,14 @@ def _filter_recall_memory_ids(
     memory_result: dict[str, Any] | None,
 ) -> list[str]:
     """
-    从注入记忆 ID 中剔除本轮 Judge 新增/更新的条目，仅保留召回的旧记忆。
+    Drop entries added or updated by this turn's Judge from injected IDs, keeping only recalled older memories.
 
-    参数:
-        injected_ids (list[str]): 本轮注入的全部记忆 ID
-        memory_result (dict | None): Judge 返回结果，含 added_ids / updated_ids
+    Args:
+        injected_ids (list[str]): all memory IDs injected this turn
+        memory_result (dict | None): Judge result, including added_ids / updated_ids
 
-    返回:
-        list[str]: 可用于「Memories used」展示的记忆 ID
+    Returns:
+        list[str]: memory IDs suitable for the "Memories used" display
     """
     if not injected_ids:
         return []
@@ -124,14 +124,14 @@ def _filter_recall_memory_ids(
 
 def _build_memory_refs_from_ids(uid: str, entry_ids: list[str]) -> list[dict[str, str]]:
     """
-    按记忆 ID 列表构造前端展示用的引用条目。
+    Build frontend display refs from a list of memory IDs.
 
-    参数:
-        uid (str): 用户 ID
-        entry_ids (list[str]): 本轮注入或引用的记忆 ID
+    Args:
+        uid (str): user ID
+        entry_ids (list[str]): memory IDs injected or referenced this turn
 
-    返回:
-        list[dict]: 引用条目列表
+    Returns:
+        list[dict]: list of reference entries
     """
     if not entry_ids:
         return []
@@ -149,14 +149,14 @@ def _build_memory_refs_from_ids(uid: str, entry_ids: list[str]) -> list[dict[str
 
 def _generate_title(uid: str, session_id: str) -> str | None:
     """
-    根据首轮对话生成会话标题（同步，供 to_thread 调用）。
+    Generate a session title from the first turn (sync; for to_thread).
 
-    参数:
-        uid (str): 用户 ID
-        session_id (str): 会话 ID
+    Args:
+        uid (str): user ID
+        session_id (str): session ID
 
-    返回:
-        str | None: 生成的标题，失败时返回 None
+    Returns:
+        str | None: generated title, or None on failure
     """
     try:
         messages = load_history(uid, session_id)
@@ -192,19 +192,19 @@ def _generate_title(uid: str, session_id: str) -> str | None:
 
 def _parse_suggested_questions(raw: str) -> list[str]:
     """
-    从模型输出中解析追问列表（优先 JSON 数组，否则按行拆分）。
+    Parse follow-up questions from model output (prefer a JSON array, else split by line).
 
-    参数:
-        raw (str): 模型原始输出
+    Args:
+        raw (str): raw model output
 
-    返回:
-        list[str]: 最多 3 条非空追问
+    Returns:
+        list[str]: up to 3 non-empty follow-up questions
     """
     text = (raw or "").strip()
     if not text:
         return []
 
-    # 尝试提取 JSON 数组
+    # Try to extract a JSON array
     start = text.find("[")
     end = text.rfind("]")
     if start != -1 and end > start:
@@ -220,7 +220,7 @@ def _parse_suggested_questions(raw: str) -> list[str]:
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # 按行拆分，去掉编号前缀
+    # Split by line and strip numbering prefixes
     questions: list[str] = []
     for line in text.splitlines():
         line = line.strip().strip("\"'").lstrip("0123456789.-、)） ").strip()
@@ -235,14 +235,14 @@ def _generate_suggested_questions(
     user_message: str, assistant_content: str
 ) -> list[str]:
     """
-    根据本轮对话生成约 3 条可继续追问的短问题（同步，供 to_thread 调用）。
+    Generate about 3 short follow-up questions from this turn (sync; for to_thread).
 
-    参数:
-        user_message (str): 用户本轮消息
-        assistant_content (str): 助手本轮完整回复
+    Args:
+        user_message (str): user message this turn
+        assistant_content (str): full assistant reply this turn
 
-    返回:
-        list[str]: 追问列表，失败时返回空列表
+    Returns:
+        list[str]: follow-up questions, or an empty list on failure
     """
     try:
         user_snip = (user_message or "")[:300]
@@ -284,15 +284,15 @@ async def event_generator(
     session_id: str,
 ) -> AsyncGenerator[dict, None]:
     """
-    从 Agent 流式生成 SSE 事件并持久化会话。
+    Stream SSE events from the Agent and persist the session.
 
-    参数:
-        uid (str): 用户 ID
-        message (str): 用户消息
-        session_id (str): 会话 ID
+    Args:
+        uid (str): user ID
+        message (str): user message
+        session_id (str): session ID
 
     Yields:
-        dict: SSE 事件 {event, data}
+        dict: SSE event {event, data}
     """
     turn_t0 = time.perf_counter()
     try:
@@ -306,7 +306,7 @@ async def event_generator(
             len(message),
         )
 
-        # 先完成记忆判断，有变更则先下发 Toast，再开始生成回复
+        # Finish memory judgment first; if anything changed, send a Toast before generating the reply
         memory_result: dict[str, Any] = {
             "changed": False,
             "added_ids": [],
@@ -399,12 +399,12 @@ async def event_generator(
                 segments.append(current_segment)
                 all_content = "".join(seg["content"] for seg in segments)
                 recall_mode = event.get("recall_mode", "full")
-                # 仅展示召回的旧记忆；本轮 Judge 新增/更新的条目不标为 Memories used
+                # Show only recalled older memories; entries added/updated by this turn's Judge are not marked as Memories used
                 injected_ids = event.get("injected_entry_ids") or []
                 recall_ids = _filter_recall_memory_ids(injected_ids, memory_result)
                 turn_refs = _build_memory_refs_from_ids(uid, recall_ids)
 
-                # 与后续 title / memory 并行生成追问建议
+                # Generate follow-up suggestions in parallel with title / memory work
                 suggest_task = asyncio.create_task(
                     asyncio.to_thread(
                         _generate_suggested_questions, message, all_content
@@ -415,7 +415,7 @@ async def event_generator(
                 save_message(uid, session_id, "user", message)
                 for i, seg in enumerate(segments):
                     tc = seg["tool_calls"] if seg["tool_calls"] else None
-                    # 引用卡片挂在最后一段助手消息上
+                    # Attach reference cards to the last assistant segment
                     seg_refs = turn_refs if i == len(segments) - 1 else None
                     save_message(
                         uid,
@@ -486,7 +486,7 @@ async def event_generator(
                             ),
                         }
 
-                # 下发追问建议（失败则静默跳过）
+                # Send follow-up suggestions (skip silently on failure)
                 try:
                     suggest_t0 = time.perf_counter()
                     questions = await suggest_task
@@ -538,13 +538,13 @@ async def chat(
     user: UserRecord = Depends(get_current_user),
 ):
     """
-    SSE 流式聊天接口。
+    SSE streaming chat endpoint.
 
-    参数:
-        request (ChatRequest): 消息与会话 ID
+    Args:
+        request (ChatRequest): message and session ID
 
-    返回:
-        EventSourceResponse: SSE 事件流
+    Returns:
+        EventSourceResponse: SSE event stream
     """
     if request.stream:
         return EventSourceResponse(

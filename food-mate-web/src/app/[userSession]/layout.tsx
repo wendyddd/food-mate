@@ -4,7 +4,7 @@ import { AuthProvider } from "@/lib/auth";
 import { AppProvider } from "@/lib/store";
 
 /**
- * 用户会话路由布局：校验 session 并为子页面提供认证与全局状态。
+ * User-session route layout: verify the session and provide auth plus global state for child pages.
  */
 export default function UserSessionLayout({
   children,

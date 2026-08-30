@@ -1,5 +1,5 @@
 """
-相关记忆召回：用大模型判断当前输入相关的记忆条目。
+Relevant memory recall: use an LLM to pick memory entries related to the current input.
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ from src.memory_schema import MemoryEntry
 @dataclass(frozen=True)
 class RetrieveResult:
     """
-    记忆相关性召回结果。
+    Result of relevance-based memory recall.
 
-    参数:
-        ok (bool): 是否成功（失败时应回退全量注入）
-        entries (list[MemoryEntry]): 筛选出的相关条目（可为空）
+    Attributes:
+        ok (bool): Whether recall succeeded (on failure, fall back to injecting all)
+        entries (list[MemoryEntry]): Filtered relevant entries (may be empty)
     """
 
     ok: bool
@@ -30,13 +30,13 @@ class RetrieveResult:
 
 def _strip_json_fences(text: str) -> str:
     """
-    去掉模型输出中的 JSON 代码围栏。
+    Strip JSON code fences from model output.
 
-    参数:
-        text (str): 原始输出
+    Args:
+        text (str): Raw output
 
-    返回:
-        str: 纯 JSON 字符串
+    Returns:
+        str: Plain JSON string
     """
     cleaned = text.strip()
     if cleaned.startswith("```json"):
@@ -50,13 +50,13 @@ def _strip_json_fences(text: str) -> str:
 
 def _format_entries_for_prompt(entries: list[MemoryEntry]) -> str:
     """
-    将记忆条目格式化为召回提示文本。
+    Format memory entries as recall-prompt text.
 
-    参数:
-        entries (list[MemoryEntry]): 记忆条目列表
+    Args:
+        entries (list[MemoryEntry]): Memory entry list
 
-    返回:
-        str: 格式化文本
+    Returns:
+        str: Formatted text
     """
     if not entries:
         return "(No memories yet)"
@@ -68,14 +68,14 @@ def _format_entries_for_prompt(entries: list[MemoryEntry]) -> str:
 
 def _format_recent_history(history: list[dict], max_turns: int = 4) -> str:
     """
-    将近期对话格式化为短文本。
+    Format recent conversation as short text.
 
-    参数:
-        history (list[dict]): user/assistant 历史
-        max_turns (int): 最多保留的轮数
+    Args:
+        history (list[dict]): user/assistant history
+        max_turns (int): Max turns to keep
 
-    返回:
-        str: 格式化对话
+    Returns:
+        str: Formatted conversation
     """
     if not history:
         return "(No history)"
@@ -91,13 +91,13 @@ def _format_recent_history(history: list[dict], max_turns: int = 4) -> str:
 
 def _parse_relevant_ids(raw: str) -> list[str] | None:
     """
-    解析模型输出的相关记忆 ID 列表。
+    Parse relevant memory IDs from model output.
 
-    参数:
-        raw (str): 模型原始输出
+    Args:
+        raw (str): Raw model output
 
-    返回:
-        list[str] | None: 解析成功返回 ID 列表（可为空）；JSON 无效返回 None
+    Returns:
+        list[str] | None: ID list on success (may be empty); None if JSON is invalid
     """
     cleaned = _strip_json_fences(raw)
     data = None
@@ -133,16 +133,17 @@ def retrieve_relevant_memories(
     model: str = DEFAULT_MODEL,
 ) -> RetrieveResult:
     """
-    根据当前用户输入，用大模型筛选相关长期记忆。
+    Use an LLM to filter long-term memories relevant to the current user input.
 
-    参数:
-        uid (str): 用户 ID
-        user_message (str): 当前用户消息
-        history (list[dict]): 不含 system 的近期历史
-        model (str): 使用的模型名称
+    Args:
+        uid (str): User ID
+        user_message (str): Current user message
+        history (list[dict]): Recent history without system messages
+        model (str): Model name to use
 
-    返回:
-        RetrieveResult: ok=True 时 entries 为筛选结果（可为空）；ok=False 表示应回退全量
+    Returns:
+        RetrieveResult: When ok=True, entries is the filtered set (may be empty);
+            ok=False means fall back to injecting all memories
     """
     entries = list_entries(uid)
     if not entries:
@@ -189,7 +190,7 @@ Select relevant memory IDs. Output JSON.
     if parsed_ids is None:
         return RetrieveResult(ok=False, entries=[])
 
-    # 校验存在、去重保序
+    # Validate existence, dedupe, keep order
     selected: list[MemoryEntry] = []
     seen: set[str] = set()
     for eid in parsed_ids:

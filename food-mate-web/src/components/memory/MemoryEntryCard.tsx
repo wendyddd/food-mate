@@ -14,17 +14,14 @@ import { getSourceVisual } from "@/lib/memoryVisuals";
 import { splitMemoryKeywords } from "@/lib/memoryKeywords";
 import MemoryRevisionDialog from "./MemoryRevisionDialog";
 
-/** localStorage 中记录「已读修改时间」的键前缀 */
+/** localStorage key prefix for the last-seen revision timestamp */
 const SEEN_REVISION_KEY_PREFIX = "foodmate_memory_rev_seen_";
 
 /**
- * 读取某条目已读到的最新修改时间戳。
+ * Read the latest revision timestamp marked as seen for an entry.
  *
- * 参数:
- * entryId (string): 记忆条目 ID
- *
- * 返回:
- * number: 已读截止时间（秒）；未读过则为 0
+ * @param entryId - Memory entry ID
+ * @returns Seen cutoff time in seconds; 0 if never seen
  */
 function readSeenRevisionAt(entryId: string): number {
   if (typeof window === "undefined") return 0;
@@ -38,14 +35,10 @@ function readSeenRevisionAt(entryId: string): number {
 }
 
 /**
- * 将某条目标记为已读至指定修改时间。
+ * Mark an entry as seen up to the given revision time.
  *
- * 参数:
- * entryId (string): 记忆条目 ID
- * changedAt (number): 已读到的最新 changed_at
- *
- * 返回:
- * void
+ * @param entryId - Memory entry ID
+ * @param changedAt - Latest changed_at that has been seen
  */
 function writeSeenRevisionAt(entryId: string, changedAt: number): void {
   if (typeof window === "undefined") return;
@@ -62,14 +55,14 @@ function writeSeenRevisionAt(entryId: string, changedAt: number): void {
 interface Props {
   entry: MemoryEntry;
   index?: number;
-  /** 是否为从聊天引用跳转过来的高亮目标 */
+  /** Whether this card is the highlight target jumped to from a chat citation */
   highlighted?: boolean;
   onUpdate: (id: string, content: string, category: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
 /**
- * 普通卡片风格的记忆条目，支持内联编辑、删除、修改记录与来源追溯。
+ * Plain-card memory entry with inline edit, delete, revision history, and source tracing.
  */
 export default function MemoryEntryCard({
   entry,
@@ -103,10 +96,7 @@ export default function MemoryEntryCard({
   }, [entry.id]);
 
   /**
-   * 打开修改记录并清除未读角标。
-   *
-   * 返回:
-   * void
+   * Open revision history and clear the unread badge.
    */
   const openRevisions = () => {
     setShowRevisions(true);
@@ -151,7 +141,7 @@ export default function MemoryEntryCard({
     });
 
   /**
-   * 构造来源会话链接；有原话时附带 quote，供聊天页定位到提取来源消息。
+   * Build a source-session link; include quote when present so chat can locate the extraction message.
    */
   const sessionHref = (() => {
     if (!userSession || !entry.source_session_id) return null;

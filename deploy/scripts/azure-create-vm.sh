@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# 使用 Azure CLI 创建 Food Mate 所需资源（East Asia / B2s / Ubuntu 22.04）
+# Create Food Mate Azure resources with Azure CLI (East Asia / B2s / Ubuntu 22.04)
 #
-# 前置（本机）:
-#   1. 安装 Azure CLI: https://learn.microsoft.com/cli/azure/install-azure-cli
+# Prerequisites (local):
+#   1. Install Azure CLI: https://learn.microsoft.com/cli/azure/install-azure-cli
 #   2. az login
-#   3. az account show   # 确认已选中正确订阅
+#   3. az account show   # Confirm the correct subscription is selected
 #
-# 用法:
+# Usage:
 #   bash deploy/scripts/azure-create-vm.sh
 #   FOODMATE_ADMIN_USER=azureuser bash deploy/scripts/azure-create-vm.sh
 #
@@ -19,7 +19,7 @@ LOC="${FOODMATE_LOCATION:-eastasia}"
 VM_NAME="${FOODMATE_VM_NAME:-vm-foodmate}"
 VM_SIZE="${FOODMATE_VM_SIZE:-Standard_B2s}"
 ADMIN_USER="${FOODMATE_ADMIN_USER:-azureuser}"
-# 默认用本机 ~/.ssh/id_rsa.pub；可改 FOODMATE_SSH_KEY
+# Default to local ~/.ssh/id_rsa.pub; override with FOODMATE_SSH_KEY
 SSH_KEY="${FOODMATE_SSH_KEY:-$HOME/.ssh/id_rsa.pub}"
 NSG_NAME="${VM_NAME}-nsg"
 PUBLIC_IP_NAME="${VM_NAME}-ip"

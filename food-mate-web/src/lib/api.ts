@@ -1,20 +1,19 @@
 /**
- * FoodMate 后端 API 客户端。
- * 自定义 SSE 解析器，支持 POST 流式请求（原生 EventSource 仅支持 GET）。
+ * FoodMate backend API client.
+ * Custom SSE parser that supports POST streaming (native EventSource is GET-only).
  */
 
 import type { MemoryEntry } from "./types";
 
 /**
- * 解析后端 API 根路径。
+ * Resolve the backend API root path.
  *
- * 优先级：
- * 1. NEXT_PUBLIC_API_BASE（显式覆盖，如 https://foodmates365.com/api）
- * 2. NEXT_PUBLIC_FOODMATE_API_PORT（本地 start.sh：跨端口访问）
- * 3. 相对路径 /api（生产：经 Nginx 同域反代）
+ * Priority:
+ * 1. NEXT_PUBLIC_API_BASE (explicit override, e.g. https://foodmates365.com/api)
+ * 2. NEXT_PUBLIC_FOODMATE_API_PORT (local start.sh: cross-port access)
+ * 3. Relative path /api (production: same-origin Nginx reverse proxy)
  *
- * 返回:
- * string: API 根路径（不含末尾斜杠之外的多余斜杠）
+ * @returns API root path (no extra trailing slash)
  */
 function resolveApiBase(): string {
   const explicit = process.env.NEXT_PUBLIC_API_BASE?.trim();
@@ -33,10 +32,10 @@ function resolveApiBase(): string {
   return "/api";
 }
 
-/** 后端 API 根路径 */
+/** Backend API root path */
 export const API_BASE = resolveApiBase();
 
-/** 当前登录用户的 URL session 标识（由 AuthProvider 设置） */
+/** Current signed-in user's URL session id (set by AuthProvider) */
 let currentUserSession: string | null = null;
 
 export function getUserSession(): string | null {
@@ -44,23 +43,18 @@ export function getUserSession(): string | null {
 }
 
 /**
- * 设置或清除当前用户的 URL session，供 API 请求附带鉴权头。
+ * Set or clear the current user's URL session for API auth headers.
  *
- * 参数:
- * session (string | null): CSV 中的 session 列
- *
- * 返回:
- * void
+ * @param session - Session column from the CSV
  */
 export function setUserSession(session: string | null): void {
   currentUserSession = session;
 }
 
 /**
- * 获取当前登录 session，未登录时抛出错误。
+ * Return the current signed-in session, or throw if not signed in.
  *
- * 返回:
- * string: 用户 session 标识
+ * @returns User session id
  */
 function requireUserSession(): string {
   const session = getUserSession();
@@ -74,19 +68,16 @@ export interface AuthInfo {
   uid: string;
   session: string;
   nickname: string;
-  /** 是否展示调试/记忆相关 UI：1 展示，0 隐藏 */
+  /** Whether to show debug/memory UI: 1 show, 0 hide */
   is_show: number;
 }
 
 /**
- * 发起带用户 session 鉴权的 fetch 请求。
+ * Fetch with the user session auth header attached.
  *
- * 参数:
- * input (RequestInfo | URL): 请求地址
- * init (RequestInit): fetch 选项
- *
- * 返回:
- * Promise<Response>
+ * @param input - Request URL
+ * @param init - fetch options
+ * @returns Promise resolving to the Response
  */
 async function apiFetch(
   input: RequestInfo | URL,
@@ -103,14 +94,11 @@ async function apiFetch(
 }
 
 /**
- * 使用 uid 与密码登录。
+ * Sign in with uid and password.
  *
- * 参数:
- * uid (string): 用户 ID
- * pwd (string): 密码
- *
- * 返回:
- * Promise<AuthInfo>
+ * @param uid - User ID
+ * @param pwd - Password
+ * @returns Promise resolving to AuthInfo
  */
 export async function login(uid: string, pwd: string): Promise<AuthInfo> {
   const resp = await apiFetch(`${API_BASE}/auth/login`, {
@@ -125,13 +113,10 @@ export async function login(uid: string, pwd: string): Promise<AuthInfo> {
 }
 
 /**
- * 校验 URL session 是否合法。
+ * Verify that a URL session is valid.
  *
- * 参数:
- * userSession (string): URL 中的 session 标识
- *
- * 返回:
- * Promise<AuthInfo>
+ * @param userSession - Session id from the URL
+ * @returns Promise resolving to AuthInfo
  */
 export async function verifySession(userSession: string): Promise<AuthInfo> {
   const resp = await apiFetch(
@@ -179,7 +164,7 @@ export async function* streamChat(
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    // 按空行切完整 SSE 事件，避免跨 chunk 把同一条解析两次
+    // Split complete SSE events on blank lines so a single event is not parsed twice across chunks
     const parts = buffer.split(/\r?\n\r?\n/);
     buffer = parts.pop() || "";
 
@@ -233,7 +218,7 @@ export async function saveFile(path: string, content: string): Promise<void> {
 }
 
 /**
- * 获取全部结构化记忆条目。
+ * List all structured memory entries.
  */
 export async function listMemoryEntries(): Promise<MemoryEntry[]> {
   requireUserSession();
@@ -245,7 +230,7 @@ export async function listMemoryEntries(): Promise<MemoryEntry[]> {
 }
 
 /**
- * 新增一条记忆条目。
+ * Create a memory entry.
  */
 export async function createMemoryEntry(
   category: string,
@@ -264,15 +249,12 @@ export async function createMemoryEntry(
 }
 
 /**
- * 更新指定记忆条目（可同时修改分类）。
+ * Update a memory entry (category may be changed at the same time).
  *
- * 参数:
- *   entryId - 条目 ID
- *   content - 新正文
- *   category - 可选新分类
- *
- * 返回:
- *   Promise<MemoryEntry>
+ * @param entryId - Entry ID
+ * @param content - New body text
+ * @param category - Optional new category
+ * @returns Promise resolving to the updated MemoryEntry
  */
 export async function updateMemoryEntry(
   entryId: string,
@@ -297,7 +279,7 @@ export async function updateMemoryEntry(
 }
 
 /**
- * 删除指定记忆条目。
+ * Delete a memory entry.
  */
 export async function deleteMemoryEntry(entryId: string): Promise<void> {
   requireUserSession();
@@ -310,7 +292,7 @@ export async function deleteMemoryEntry(entryId: string): Promise<void> {
 }
 
 /**
- * 导出 Markdown 格式的用户档案。
+ * Export the user profile as Markdown.
  */
 export async function getUserMemoryMarkdown(): Promise<string> {
   requireUserSession();

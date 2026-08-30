@@ -13,7 +13,7 @@ interface Props {
 }
 
 /**
- * 聊天回答中的记忆引用区：胶囊样式展示条目，点击跳转到记忆页对应位置。
+ * Memory citations in a chat reply: capsule chips; click jumps to the matching entry on the memory page.
  */
 export default function MemoryRefCard({ refs }: Props) {
   const [expanded, setExpanded] = useState(false);

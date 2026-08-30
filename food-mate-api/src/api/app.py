@@ -1,5 +1,5 @@
 """
-food-mate-api 的 FastAPI 应用入口，负责注册路由与 CORS 跨域配置。
+FastAPI application entry for food-mate-api; registers routes and CORS.
 """
 
 import os
@@ -15,7 +15,7 @@ from src.api.routes.memory import router as memory_router
 from src.api.routes.sessions import router as sessions_router
 from src.api.routes.tokens import router as tokens_router
 
-# 默认允许本地开发与正式域名；可用 FOODMATE_CORS_ORIGINS 覆盖（逗号分隔）
+# Default origins for local development and production; override with FOODMATE_CORS_ORIGINS (comma-separated)
 _DEFAULT_CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -26,13 +26,13 @@ _DEFAULT_CORS_ORIGINS = [
 
 def _load_cors_origins() -> list[str]:
     """
-    从环境变量加载 CORS 允许来源列表。
+    Load the CORS allowed-origins list from the environment.
 
-    环境变量:
-        FOODMATE_CORS_ORIGINS (str): 逗号分隔的 Origin 列表；未设置则用默认值
+    Environment:
+        FOODMATE_CORS_ORIGINS (str): comma-separated Origin list; uses defaults if unset
 
-    返回:
-        list[str]: 允许的 Origin 列表
+    Returns:
+        list[str]: allowed Origin list
     """
     raw = os.environ.get("FOODMATE_CORS_ORIGINS", "").strip()
     if not raw:
@@ -42,10 +42,10 @@ def _load_cors_origins() -> list[str]:
 
 def create_app() -> FastAPI:
     """
-    创建 FastAPI 应用实例。
+    Create a FastAPI application instance.
 
-    返回:
-        FastAPI: 应用实例
+    Returns:
+        FastAPI: application instance
     """
     app = FastAPI(title="food-mate-api", version="0.1.0")
 

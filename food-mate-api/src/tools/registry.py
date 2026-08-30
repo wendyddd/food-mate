@@ -1,5 +1,5 @@
 """
-工具注册中心，实现 注册 -> schema 生成 -> tool_call 解析 -> 工具执行 的完整闭环。
+Tool registry: register → schema generation → tool_call parsing → tool execution.
 """
 
 import json
@@ -10,13 +10,13 @@ from typing import Callable
 @dataclass
 class Tool:
     """
-    工具定义数据结构
+    Tool definition.
 
-    属性:
-        name (str): 工具名称（function calling 中的唯一标识）
-        description (str): 工具功能描述，供模型理解何时调用
-        parameters (dict): JSON Schema 格式的参数定义
-        func (Callable): 实际执行的回调函数
+    Attributes:
+        name (str): tool name (unique id in function calling)
+        description (str): what the tool does, so the model knows when to call it
+        parameters (dict): parameter definition in JSON Schema
+        func (Callable): callback that actually runs
     """
 
     name: str
@@ -27,26 +27,26 @@ class Tool:
 
 class ToolRegistry:
     """
-    工具注册中心，统一管理所有已注册工具
+    Central registry that manages all registered tools.
     """
 
     def __init__(self):
         """
-        初始化注册中心，内部用字典保存工具
+        Initialize the registry with an internal dict of tools.
         """
         self._tools: dict[str, Tool] = {}
 
     def register(self, name: str, description: str, parameters: dict) -> Callable:
         """
-        以装饰器形式注册一个工具
+        Register a tool as a decorator.
 
-        参数:
-            name (str): 工具名称
-            description (str): 工具描述
-            parameters (dict): JSON Schema 参数定义
+        Args:
+            name (str): tool name
+            description (str): tool description
+            parameters (dict): JSON Schema parameter definition
 
-        返回:
-            Callable: 装饰器，用于包装具体执行函数
+        Returns:
+            Callable: decorator wrapping the implementation function
         """
 
         def decorator(func: Callable) -> Callable:
@@ -62,10 +62,10 @@ class ToolRegistry:
 
     def get_schemas(self) -> list[dict]:
         """
-        生成 OpenAI function calling 所需的 tools schema 数组
+        Build the tools schema array for OpenAI function calling.
 
-        返回:
-            list[dict]: 符合 OpenAI 规范的工具 schema 列表
+        Returns:
+            list[dict]: tool schemas in OpenAI format
         """
         schemas = []
         for tool in self._tools.values():
@@ -83,18 +83,18 @@ class ToolRegistry:
 
     def dispatch(self, tool_call) -> str:
         """
-        解析模型返回的 tool_call 并执行对应工具
+        Parse a model tool_call and run the matching tool.
 
-        参数:
-            tool_call: OpenAI 返回的单个 tool_call 对象，含 function.name 与 function.arguments
+        Args:
+            tool_call: a single OpenAI tool_call with function.name and function.arguments
 
-        返回:
-            str: 工具执行结果（字符串形式，便于回灌给模型）
+        Returns:
+            str: tool result as a string, for feeding back to the model
         """
         name = tool_call.function.name
         raw_args = tool_call.function.arguments or "{}"
 
-        # 解析 JSON 参数，失败则返回错误信息
+        # Parse JSON arguments; return an error message on failure
         try:
             args = json.loads(raw_args)
         except json.JSONDecodeError as e:
@@ -104,7 +104,7 @@ class ToolRegistry:
         if tool is None:
             return f"[未知工具] {name}"
 
-        # 执行工具并捕获异常，保证 Agent 循环不被中断
+        # Run the tool and catch exceptions so the Agent loop is not interrupted
         try:
             result = tool.func(**args)
             return str(result)
@@ -113,13 +113,13 @@ class ToolRegistry:
 
     def has_tools(self) -> bool:
         """
-        判断是否已注册任何工具
+        Whether any tools are registered.
 
-        返回:
-            bool: True 表示存在已注册工具
+        Returns:
+            bool: True if at least one tool is registered
         """
         return bool(self._tools)
 
 
-# 全局唯一注册中心实例
+# Global singleton registry instance
 registry = ToolRegistry()

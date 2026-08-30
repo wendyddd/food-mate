@@ -10,7 +10,7 @@ import ChatPanel from "@/components/chat/ChatPanel";
 import { useApp } from "@/lib/store";
 
 /**
- * 用户会话下的聊天页面。
+ * Chat page under a user session.
  */
 export default function UserChatPage() {
   const searchParams = useSearchParams();
@@ -20,15 +20,15 @@ export default function UserChatPage() {
     setSessionId,
   } = useApp();
   const [highlightQuote, setHighlightQuote] = useState<string | null>(null);
-  /** 已处理的 session+quote 组合，避免重复切换；同 session 不同 quote 仍可重新定位 */
+  /** Processed session+quote combo to avoid repeat switches; a new quote on the same session can still re-locate */
   const handledQueryRef = useRef<string | null>(null);
 
-  /** 定位完成后清除 quote，避免重复触发 */
+  /** Clear quote after locate finishes to avoid retriggering */
   const handleHighlightDone = useCallback(() => {
     setHighlightQuote(null);
   }, []);
 
-  // 从记忆页跳转：/?session=session-xxx&quote=... 打开对应会话并定位原话
+  // Jump from memory page: /?session=session-xxx&quote=... opens that session and locates the original quote
   useEffect(() => {
     const target = searchParams.get("session");
     if (!target) return;
@@ -38,7 +38,7 @@ export default function UserChatPage() {
     if (queryKey === handledQueryRef.current) return;
     handledQueryRef.current = queryKey;
 
-    // 同 session 仅换 quote 时不重复加载，避免闪烁
+    // Same session, new quote only: skip reload to avoid flicker
     if (target !== sessionId) {
       setSessionId(target);
     }

@@ -11,8 +11,8 @@ import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 
 /**
- * 用户会话下的记忆管理页面（结构化条目编辑）。
- * 记忆 UI 隐藏（Black-box）时无法访问，会被重定向回聊天页。
+ * Memory management page under a user session (structured entry editor).
+ * Hidden (Black-box) memory UI cannot be accessed and redirects back to chat.
  */
 export default function UserMemoryPage() {
   const { sidebarOpen } = useApp();

@@ -1,11 +1,13 @@
 """
-记忆条目相似合并与冲突消解。
+Similar-entry merge and conflict resolution for memory entries.
 
-规则：
-- 仅当两条是同一事实的近义改写时才合并（保留较早创建的 id，内容去重拼接）
-- 同类但主题不同（如喜欢吃辣 vs 喜欢吃酸）必须保持独立条目
-- 同类且内容冲突 → 以 updated_at 较新的为准
-- 短关键词句与长解释句描述同一事实时视为相似，合并时优先保留短词
+Rules:
+- Merge only when two entries are near-paraphrases of the same fact
+  (keep the earlier-created id; concatenate content after deduping clauses)
+- Same category but different topics (e.g. likes spicy vs likes sour) must stay separate
+- Same category and conflicting content → keep the one with newer updated_at
+- A short keyword and a long explanation of the same fact count as similar;
+  prefer the short wording when merging
 """
 
 from __future__ import annotations
@@ -15,10 +17,10 @@ from difflib import SequenceMatcher
 
 from src.memory_schema import MEMORY_CATEGORIES, MemoryEntry
 
-# 相似度阈值：达到则视为「类似」
+# Similarity threshold: scores at or above this count as "similar"
 SIMILARITY_THRESHOLD = 0.55
 
-# 否定/对立前缀（用于冲突检测）
+# Negation / opposing prefixes (for conflict detection)
 _NEGATION_PATTERNS = (
     r"不(?:喜欢|爱|想|吃|用|做|能|要|含)",
     r"别(?:放|加|用)",
@@ -34,24 +36,24 @@ _NEGATION_PATTERNS = (
 
 _NEGATION_RE = re.compile("|".join(_NEGATION_PATTERNS), re.IGNORECASE)
 
-# 分句分隔
+# Clause split delimiters
 _SPLIT_RE = re.compile(r"[;；。！？!\?\n]+|(?<=[,，])\s*|\s*[—–]\s+")
 
-# 原子关键词拆分：仅按分号/换行，避免拆坏 Lidl/Aldi、逗号列举等
+# Atomic keyword split: semicolon/newline only, to avoid breaking Lidl/Aldi or comma lists
 _ATOMIC_SPLIT_RE = re.compile(r"[;；]+|\n+")
 
-# 括号说明
+# Parenthetical notes
 _PAREN_RE = re.compile(r"\([^)]*\)|（[^）]*）")
 
-# 比较相似度前去掉的程度修饰（特别喜欢吃辣 → 喜欢吃辣）
+# Degree modifiers stripped before similarity compare (e.g. "really likes spicy" → "likes spicy")
 _LEAD_MODIFIER_RE = re.compile(
     r"^(?:really|very|especially|particularly|pretty|"
     r"特别|非常|很|超|比较|有点儿|有点)\s*",
     re.IGNORECASE,
 )
 
-# 比较相似度前去掉的常见谓语前缀（避免 Prefers A ≈ Prefers B）
-# 中文前缀不依赖空白；长前缀（喜欢吃）必须排在短前缀（喜欢）之前
+# Common predicate prefixes stripped before similarity compare (avoids Prefers A ≈ Prefers B)
+# Chinese prefixes do not rely on whitespace; longer prefixes must come before shorter ones
 _LEAD_PREFIX_RE = re.compile(
     r"^(?:"
     r"does\s+not\s+like|doesn't\s+like|"
@@ -66,7 +68,7 @@ _LEAD_PREFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
-# 去掉主题核心末尾的虚词/泛化名词，便于「辣」对齐「辣的」/「spicy food」
+# Strip trailing filler/generic nouns so "spicy" aligns with "spicy food"
 _TRAILING_GENERIC_RE = re.compile(
     r"(?:"
     r"的东西|的食物|的食品|的菜肴|的菜|的口味|的味道|"
@@ -80,16 +82,17 @@ _TRAILING_GENERIC_RE = re.compile(
 
 def _core_topic(text: str) -> str:
     """
-    去掉程度修饰、谓语前缀和泛化后缀后得到主题核心，用于相似度比较。
+    Strip degree modifiers, predicate prefixes, and generic suffixes to get a topic core
+    for similarity comparison.
 
-    例如「喜欢吃辣」→「辣」，「likes sour food」→「sour」，
-    避免句式相同但对象不同的偏好被误判为同一条。
+    Examples: "likes spicy food" → "spicy", "likes sour food" → "sour",
+    so preferences with the same sentence pattern but different objects are not treated as one fact.
 
-    参数:
-        text (str): 原始或规范化前文本
+    Args:
+        text (str): Original or pre-normalized text
 
-    返回:
-        str: 主题核心（仍含空白，供 normalize）
+    Returns:
+        str: Topic core (may still contain whitespace, for normalize)
     """
     cleaned = _PAREN_RE.sub("", text or "").strip()
     prev = None
@@ -105,15 +108,16 @@ def _core_topic(text: str) -> str:
 
 def split_atomic_facts(content: str) -> list[str]:
     """
-    将记忆正文拆成原子关键词事实（一张卡片一条）。
+    Split memory content into atomic keyword facts (one fact per card).
 
-    仅按分号与换行拆分；不含分号的长句保持为一条，避免误拆。
+    Split only on semicolons and newlines; long sentences without semicolons stay as one
+    fact to avoid false splits.
 
-    参数:
-        content (str): 原始记忆正文
+    Args:
+        content (str): Original memory content
 
-    返回:
-        list[str]: 去重后的原子事实列表；无法拆分时返回单元素列表
+    Returns:
+        list[str]: Deduped atomic facts; a single-item list if it cannot be split
     """
     raw = (content or "").strip()
     if not raw:
@@ -132,7 +136,7 @@ def split_atomic_facts(content: str) -> list[str]:
         key = normalize_memory_text(cleaned)
         if not key or key in seen:
             continue
-        # 过短碎片（如拆坏的 "Aldi"）丢弃，除非整段原本就很短
+        # Drop fragments that are too short (e.g. a broken "Aldi"), unless the whole text was already short
         if len(cleaned) < 3:
             continue
         seen.add(key)
@@ -145,13 +149,14 @@ def expand_multi_fact_entries(
     entries: list[MemoryEntry],
 ) -> tuple[list[MemoryEntry], bool]:
     """
-    将含多个关键词的条目拆成多条（保留首条原 id，其余新生成 id）。
+    Split entries that contain multiple keywords (keep the original id on the first;
+    generate new ids for the rest).
 
-    参数:
-        entries (list[MemoryEntry]): 原始条目
+    Args:
+        entries (list[MemoryEntry]): Original entries
 
-    返回:
-        tuple[list[MemoryEntry], bool]: (拆分后列表, 是否有变更)
+    Returns:
+        tuple[list[MemoryEntry], bool]: (split list, whether anything changed)
     """
     import secrets
 
@@ -160,7 +165,7 @@ def expand_multi_fact_entries(
     for entry in entries:
         facts = split_atomic_facts(entry.content)
         if len(facts) <= 1:
-            # 仍规范化单条（去掉括号赘述）
+            # Still normalize a single fact (strip parenthetical elaboration)
             if facts and facts[0] != entry.content:
                 changed = True
                 result.append(
@@ -213,13 +218,13 @@ def expand_multi_fact_entries(
 
 def normalize_memory_text(text: str) -> str:
     """
-    规范化记忆文本，便于相似度比较。
+    Normalize memory text for similarity comparison.
 
-    参数:
-        text (str): 原始内容
+    Args:
+        text (str): Original content
 
-    返回:
-        str: 小写、去空白后的文本
+    Returns:
+        str: Lowercased text with whitespace removed
     """
     cleaned = (text or "").strip().lower()
     cleaned = re.sub(r"\s+", "", cleaned)
@@ -228,26 +233,26 @@ def normalize_memory_text(text: str) -> str:
 
 def _strip_elaboration(text: str) -> str:
     """
-    去掉括号说明等修饰，便于短词与长句对齐。
+    Strip parenthetical notes so short keywords can align with long sentences.
 
-    参数:
-        text (str): 原始分句
+    Args:
+        text (str): Original clause
 
-    返回:
-        str: 去掉修饰后的文本
+    Returns:
+        str: Text with decorations removed
     """
     return _PAREN_RE.sub("", text or "").strip()
 
 
 def _memory_clauses(text: str) -> list[str]:
     """
-    将记忆正文拆成规范化分句（去修饰、去空白）。
+    Split memory content into normalized clauses (strip decorations and whitespace).
 
-    参数:
-        text (str): 原始内容
+    Args:
+        text (str): Original content
 
-    返回:
-        list[str]: 规范化分句列表
+    Returns:
+        list[str]: Normalized clause list
     """
     parts = [p.strip() for p in _SPLIT_RE.split(text or "") if p and p.strip()]
     clauses: list[str] = []
@@ -260,14 +265,14 @@ def _memory_clauses(text: str) -> list[str]:
 
 def _clause_coverage(short_clauses: list[str], long_clauses: list[str]) -> float:
     """
-    计算短句列表被长句列表覆盖的比例（子串或模糊匹配）。
+    Fraction of short clauses covered by the long-clause list (substring or fuzzy match).
 
-    参数:
-        short_clauses (list[str]): 较短一方的分句
-        long_clauses (list[str]): 较长一方的分句
+    Args:
+        short_clauses (list[str]): Clauses from the shorter side
+        long_clauses (list[str]): Clauses from the longer side
 
-    返回:
-        float: 0~1 覆盖率
+    Returns:
+        float: Coverage in 0~1
     """
     if not short_clauses:
         return 0.0
@@ -281,7 +286,7 @@ def _clause_coverage(short_clauses: list[str], long_clauses: list[str]) -> float
         ):
             hits += 1
             continue
-        # 短分句与某长分句足够相似也算命中
+        # A short clause that is similar enough to a long clause also counts as a hit
         best = max(
             (SequenceMatcher(None, clause, lc).ratio() for lc in long_clauses),
             default=0.0,
@@ -293,19 +298,19 @@ def _clause_coverage(short_clauses: list[str], long_clauses: list[str]) -> float
 
 def memory_similarity(a: str, b: str) -> float:
     """
-    计算两条记忆文本的相似度（0~1）。
+    Compute similarity of two memory texts (0~1).
 
-    先抽取主题核心再比较，因此「喜欢吃辣」与「喜欢吃酸的」会因核心
-    「辣」vs「酸」而得到低分，不会被当成同一条。
+    Topic cores are compared first, so "likes spicy" and "likes sour" score low
+    because the cores are "spicy" vs "sour", and are not treated as the same fact.
 
-    参数:
-        a (str): 文本 A
-        b (str): 文本 B
+    Args:
+        a (str): Text A
+        b (str): Text B
 
-    返回:
-        float: SequenceMatcher 比率；包含关系或分句高覆盖时提高得分
+    Returns:
+        float: SequenceMatcher ratio; boosted for containment or high clause coverage
     """
-    # 用去掉「Prefers/喜欢」等前缀后的主题比较，避免不同事实被误判为相似
+    # Compare topics after stripping prefixes like "prefers"/"likes", so different facts are not treated as similar
     core_a, core_b = _core_topic(a), _core_topic(b)
     na, nb = normalize_memory_text(core_a), normalize_memory_text(core_b)
     if not na or not nb:
@@ -313,11 +318,11 @@ def memory_similarity(a: str, b: str) -> float:
     if na == nb:
         return 1.0
     ratio = SequenceMatcher(None, na, nb).ratio()
-    # 短文本被长文本包含时视为高度相似
+    # Short text contained in long text counts as highly similar
     if na in nb or nb in na:
         ratio = max(ratio, 0.85)
 
-    # 分句覆盖：短词条 vs 长解释
+    # Clause coverage: short keyword vs long explanation
     ca, cb = _memory_clauses(core_a), _memory_clauses(core_b)
     if ca and cb:
         if len(na) <= len(nb):
@@ -332,13 +337,13 @@ def memory_similarity(a: str, b: str) -> float:
 
 def _strip_negation(text: str) -> str:
     """
-    去掉否定词后得到主题骨架，用于冲突对齐。
+    Strip negation words to get a topic skeleton for conflict alignment.
 
-    参数:
-        text (str): 原始内容
+    Args:
+        text (str): Original content
 
-    返回:
-        str: 去除否定后的规范化文本
+    Returns:
+        str: Normalized text with negation removed
     """
     stripped = _NEGATION_RE.sub("", text or "")
     return normalize_memory_text(stripped)
@@ -346,18 +351,18 @@ def _strip_negation(text: str) -> str:
 
 def is_memory_conflict(a: str, b: str) -> bool:
     """
-    判断两条记忆是否冲突（同一主题但极性相反）。
+    Decide whether two memories conflict (same topic, opposite polarity).
 
-    参数:
-        a (str): 内容 A
-        b (str): 内容 B
+    Args:
+        a (str): Content A
+        b (str): Content B
 
-    返回:
-        bool: 冲突则 True
+    Returns:
+        bool: True if they conflict
     """
     if not (a or "").strip() or not (b or "").strip():
         return False
-    # 先要求主题足够接近
+    # Require the topics to be close enough first
     topic_a, topic_b = _strip_negation(a), _strip_negation(b)
     if not topic_a or not topic_b:
         return False
@@ -368,22 +373,22 @@ def is_memory_conflict(a: str, b: str) -> bool:
         return False
     has_neg_a = bool(_NEGATION_RE.search(a))
     has_neg_b = bool(_NEGATION_RE.search(b))
-    # 一方有否定、另一方没有 → 冲突；或双方都有否定但主题不同则不算
+    # One side negated and the other not → conflict; both negated with different topics does not count
     return has_neg_a != has_neg_b
 
 
 def is_same_memory_fact(a: str, b: str) -> bool:
     """
-    判断两条记忆是否描述同一事实（近义改写或极性冲突）。
+    Decide whether two memories describe the same fact (near-paraphrase or polarity conflict).
 
-    用于区分「应合并/覆盖」与「应各自独立成条」。
+    Used to distinguish "should merge/overwrite" from "should stay as separate entries".
 
-    参数:
-        a (str): 内容 A
-        b (str): 内容 B
+    Args:
+        a (str): Content A
+        b (str): Content B
 
-    返回:
-        bool: 同一事实则 True；不同偏好（如辣 vs 酸）则 False
+    Returns:
+        bool: True if the same fact; False for different preferences (e.g. spicy vs sour)
     """
     if not (a or "").strip() or not (b or "").strip():
         return False
@@ -394,14 +399,15 @@ def is_same_memory_fact(a: str, b: str) -> bool:
 
 def merge_memory_contents(existing: str, incoming: str) -> str:
     """
-    合并两条互补记忆内容，去重分句后拼接；同类长短句优先保留短关键词。
+    Merge two complementary memory texts: dedupe clauses then join;
+    for same-topic short vs long, prefer the short keyword.
 
-    参数:
-        existing (str): 已有内容
-        incoming (str): 新内容
+    Args:
+        existing (str): Existing content
+        incoming (str): New content
 
-    返回:
-        str: 合并后的内容
+    Returns:
+        str: Merged content
     """
     a = (existing or "").strip()
     b = (incoming or "").strip()
@@ -413,11 +419,11 @@ def merge_memory_contents(existing: str, incoming: str) -> str:
     if na == nb:
         return a if len(a) <= len(b) else b
     if na in nb:
-        return a  # 短词已被长句覆盖 → 保留短词
+        return a  # Short keyword already covered by the long sentence → keep the short one
     if nb in na:
         return b
 
-    # 高覆盖时优先保留更短的关键词写法
+    # On high coverage, prefer the shorter keyword wording
     ca, cb = _memory_clauses(a), _memory_clauses(b)
     if ca and cb:
         if len(na) <= len(nb) and _clause_coverage(ca, cb) >= 0.6:
@@ -435,12 +441,12 @@ def merge_memory_contents(existing: str, incoming: str) -> str:
         key = normalize_memory_text(_strip_elaboration(clause))
         if not key:
             continue
-        # 已有完全相同分句
+        # Identical clause already present
         if key in keys:
             continue
         replaced = False
         for i, old_key in enumerate(keys):
-            # 长句包含短句主题 → 保留更短的关键词句
+            # Long sentence contains the short-clause topic → keep the shorter keyword
             if old_key in key and old_key != key:
                 replaced = True
                 break
@@ -449,7 +455,7 @@ def merge_memory_contents(existing: str, incoming: str) -> str:
                 keys[i] = key
                 replaced = True
                 break
-            # 去修饰后相同 → 保留更短
+            # Same after stripping decorations → keep the shorter one
             if key == old_key:
                 if len(clause) < len(ordered[i]):
                     ordered[i] = clause
@@ -475,17 +481,17 @@ def find_similar_entry(
     exclude_id: str | None = None,
 ) -> MemoryEntry | None:
     """
-    在同类条目中查找与给定内容最相似的一条。
+    Find the most similar same-category entry for the given content.
 
-    参数:
-        entries (list[MemoryEntry]): 现有条目
-        category (str): 分类
-        content (str): 待比较内容
-        threshold (float): 相似度阈值
-        exclude_id (str | None): 排除的条目 ID
+    Args:
+        entries (list[MemoryEntry]): Existing entries
+        category (str): Category
+        content (str): Content to compare
+        threshold (float): Similarity threshold
+        exclude_id (str | None): Entry ID to exclude
 
-    返回:
-        MemoryEntry | None: 最相似且超过阈值的条目，否则 None
+    Returns:
+        MemoryEntry | None: Most similar entry above the threshold, otherwise None
     """
     best: MemoryEntry | None = None
     best_score = 0.0
@@ -503,16 +509,16 @@ def find_similar_entry(
 
 def resolve_pair(older: MemoryEntry, newer: MemoryEntry) -> MemoryEntry:
     """
-    消解一对相似/冲突条目，返回应保留的单条。
+    Resolve a similar/conflicting pair and return the single entry to keep.
 
-    参数:
-        older (MemoryEntry): 创建时间较早（或任意）的一条
-        newer (MemoryEntry): 另一条
+    Args:
+        older (MemoryEntry): The earlier-created entry (or either one)
+        newer (MemoryEntry): The other entry
 
-    返回:
-        MemoryEntry: 合并或择优后的条目（保留较早 created_at 的 id）
+    Returns:
+        MemoryEntry: Merged or preferred entry (keeps the earlier created_at id)
     """
-    # 按 updated_at 判定谁更新；相等则按 created_at
+    # Decide which is newer by updated_at; tie-break with created_at
     if newer.updated_at > older.updated_at or (
         newer.updated_at == older.updated_at and newer.created_at > older.created_at
     ):
@@ -530,7 +536,7 @@ def resolve_pair(older: MemoryEntry, newer: MemoryEntry) -> MemoryEntry:
         source_quote = latest.source_quote
     else:
         content = merge_memory_contents(other.content, latest.content)
-        # 来源跟最新一条
+        # Source follows the latest entry
         source_type = latest.source_type or other.source_type
         source_session_id = latest.source_session_id or other.source_session_id
         source_quote = latest.source_quote or other.source_quote
@@ -554,16 +560,18 @@ def reconcile_entries(
     threshold: float = SIMILARITY_THRESHOLD,
 ) -> tuple[list[MemoryEntry], bool]:
     """
-    先将多关键词条目拆成原子卡片，再对同类近义/冲突条目合并消解。
+    Split multi-keyword entries into atomic cards, then merge/resolve similar or
+    conflicting same-category entries.
 
-    不同事实（即使句式相似，如喜欢吃辣 vs 喜欢吃酸）不会被合并。
+    Distinct facts (even with similar sentence patterns, e.g. likes spicy vs likes sour)
+    are not merged.
 
-    参数:
-        entries (list[MemoryEntry]): 原始条目列表
-        threshold (float): 相似阈值
+    Args:
+        entries (list[MemoryEntry]): Original entry list
+        threshold (float): Similarity threshold
 
-    返回:
-        tuple[list[MemoryEntry], bool]: (消解后列表, 是否有变更)
+    Returns:
+        tuple[list[MemoryEntry], bool]: (resolved list, whether anything changed)
     """
     expanded, expand_changed = expand_multi_fact_entries(list(entries))
     if len(expanded) < 2:
@@ -582,17 +590,17 @@ def reconcile_entries(
 
     for category in MEMORY_CATEGORIES:
         group = list(by_category[category])
-        # 反复合并，直到没有可合并对
+        # Repeatedly merge until no mergeable pair remains
         while True:
             pair: tuple[int, int] | None = None
             best_sim = 0.0
             for i in range(len(group)):
                 for j in range(i + 1, len(group)):
                     sim = memory_similarity(group[i].content, group[j].content)
-                    # 冲突即使相似度略低也处理（主题骨架接近）
+                    # Handle conflicts even if similarity is a bit low (topic skeletons are close)
                     conflict = is_memory_conflict(group[i].content, group[j].content)
                     if conflict and sim < threshold:
-                        # 冲突时用较低阈值的主题相似度已在 is_memory_conflict 内判断
+                        # For conflicts, topic closeness is already judged inside is_memory_conflict
                         sim = max(sim, threshold)
                     if sim >= threshold and sim > best_sim:
                         best_sim = sim
@@ -602,7 +610,7 @@ def reconcile_entries(
             i, j = pair
             a, b = group[i], group[j]
             merged = resolve_pair(a, b)
-            # 删掉原对，放入合并结果
+            # Drop the original pair and insert the merged result
             group = [e for k, e in enumerate(group) if k not in (i, j)]
             group.append(merged)
             changed = True

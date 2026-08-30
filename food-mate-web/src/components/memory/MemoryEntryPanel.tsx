@@ -26,8 +26,8 @@ import MemoryCategorySection from "./MemoryCategorySection";
 import MemoryOverview from "./MemoryOverview";
 
 /**
- * 结构化记忆编辑器主面板（总览 + 筛选 + 按类目 CRUD）。
- * 支持 ?entry=mem_xxx 从聊天引用定位到对应条目。
+ * Structured memory editor (overview + filters + per-category CRUD).
+ * Supports ?entry=mem_xxx to locate an entry from a chat citation.
  */
 export default function MemoryEntryPanel() {
   const t = useT();
@@ -39,7 +39,7 @@ export default function MemoryEntryPanel() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightEntryId, setHighlightEntryId] = useState<string | null>(null);
-  /** 已完成定位的 entry id，避免 entries 更新时重复滚动 */
+  /** Entry id already scrolled to, so later entries updates do not scroll again */
   const scrolledEntryRef = useRef<string | null>(null);
 
   const loadEntries = useCallback(async () => {
@@ -59,9 +59,9 @@ export default function MemoryEntryPanel() {
   }, [loadEntries]);
 
   /**
-   * 根据 URL ?entry= 定位并短暂高亮目标记忆卡片。
-   * 使用重试滚动，避免分类尚未展开时 DOM 不存在；
-   * 仅在滚动成功后标记已处理，避免 Strict Mode 清理定时器后二次跳过。
+   * Locate and briefly highlight the target memory card from URL ?entry=.
+   * Retries scrolling until the category has expanded and the DOM exists;
+   * marks handled only after a successful scroll so Strict Mode timer cleanup does not skip a second pass.
    */
   useEffect(() => {
     if (loading || !focusEntryId) return;
@@ -70,7 +70,7 @@ export default function MemoryEntryPanel() {
     const target = entries.find((e) => e.id === focusEntryId);
     if (!target) return;
 
-    // 清除筛选，确保目标条目可见
+    // Clear filters so the target entry is visible
     setSourceFilter("all");
     setSearchQuery("");
     setHighlightEntryId(focusEntryId);
@@ -81,7 +81,7 @@ export default function MemoryEntryPanel() {
     let clearHighlightTimer = 0;
 
     /**
-     * 尝试滚动到目标卡片；若尚未挂载则短间隔重试。
+     * Try scrolling to the target card; retry shortly if it is not mounted yet.
      */
     const tryScroll = () => {
       if (cancelled) return;
@@ -144,7 +144,7 @@ export default function MemoryEntryPanel() {
     }
   };
 
-  /** 按来源与关键字过滤后的条目 */
+  /** Entries after source and keyword filters */
   const filteredEntries = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return entries.filter((e) => {
@@ -228,7 +228,7 @@ export default function MemoryEntryPanel() {
           <>
             <MemoryOverview entries={entries} />
 
-            {/* 筛选栏 */}
+            {/* Filter bar */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex-1 min-w-[160px]">
                 <Search
@@ -279,7 +279,7 @@ export default function MemoryEntryPanel() {
             ) : (
               MEMORY_CATEGORIES.map((category) => {
                 const catEntries = entriesByCategory[category] || [];
-                // 筛选时隐藏空分类，未筛选时保留全部以便新增
+                // Hide empty categories while filtering; keep all when not filtering so new entries can be added
                 if (isFiltering && catEntries.length === 0) return null;
                 return (
                   <MemoryCategorySection

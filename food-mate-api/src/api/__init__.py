@@ -1,3 +1,3 @@
 """
-food-mate-api 的 API 包标识文件。
+API package marker for food-mate-api.
 """

@@ -10,7 +10,7 @@ interface Props {
 }
 
 /**
- * Trace 调试面板，展示发给 LLM 的 system prompt 与会话原始消息。
+ * Trace debug panel showing the system prompt sent to the LLM and raw session messages.
  */
 export default function RawMessagesPanel({ onClose }: Props) {
   const { rawMessages, loadRawMessages } = useApp();
@@ -82,7 +82,7 @@ export default function RawMessagesPanel({ onClose }: Props) {
   );
 }
 
-/** 单条原始消息，含可选 tool_calls 展示 */
+/** A single raw message, optionally showing tool_calls */
 function RawMessageItem({
   msg,
 }: {
@@ -166,7 +166,7 @@ function RawMessageItem({
   );
 }
 
-/** 可折叠的 tool call 详情 */
+/** Collapsible tool-call details */
 function ToolCallItem({
   tc,
 }: {

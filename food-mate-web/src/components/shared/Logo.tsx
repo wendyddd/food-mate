@@ -1,21 +1,18 @@
 import Image from "next/image";
 
 interface LogoProps {
-  /** 显示尺寸（宽高相等，单位 px） */
+  /** Display size (equal width and height, in px) */
   size?: number;
-  /** 附加 CSS 类名 */
+  /** Extra CSS class names */
   className?: string;
 }
 
 /**
- * FoodMate 品牌 Logo
+ * FoodMate brand logo
  *
- * 参数:
- * size (number): 显示尺寸，默认 32
- * className (string): 附加样式类名
- *
- * 返回:
- * JSX.Element: Logo 图片元素
+ * @param size - Display size, default 32
+ * @param className - Extra CSS class names
+ * @returns Logo image element
  */
 export default function Logo({ size = 32, className = "" }: LogoProps) {
   return (

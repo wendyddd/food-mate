@@ -1,8 +1,8 @@
 /**
- * 用户登录态 Context，管理 uid、URL session 与记忆 UI 可见性。
+ * Auth context for uid, URL session, and memory UI visibility.
  *
- * is_show（账号字段）表示是否展示调试/记忆相关 UI：
- * 1 = 展示，0 = 隐藏；登录后按账号固定取值，不可在会话内切换。
+ * is_show (account field) controls debug/memory UI:
+ * 1 = show, 0 = hide; fixed per account after login and cannot be toggled in-session.
  */
 
 "use client";
@@ -21,27 +21,24 @@ export interface AuthState {
   uid: string;
   userSession: string;
   nickname: string;
-  /** 是否展示调试/记忆相关 UI（由账号 is_show 决定） */
+  /** Whether to show debug/memory UI (from account is_show) */
   isShow: boolean;
 }
 
 interface AuthContextValue extends AuthState {
   loading: boolean;
-  /** 清除登录态并跳转到登录页 */
+  /** Clear auth state and navigate to the login page */
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * 为受保护路由提供用户认证上下文。
+ * Provide auth context for protected routes.
  *
- * 参数:
- * userSession (string): URL 中的 session 标识
- * children (React.ReactNode): 子组件
- *
- * 返回:
- * JSX.Element
+ * @param userSession - Session id from the URL
+ * @param children - Child components
+ * @returns JSX element
  */
 export function AuthProvider({
   userSession,
@@ -73,10 +70,7 @@ export function AuthProvider({
   }, [userSession, router]);
 
   /**
-   * 退出登录：清除内存中的 session，并跳转到登录页。
-   *
-   * 返回:
-   * void
+   * Sign out: clear the in-memory session and navigate to the login page.
    */
   const logout = useCallback(() => {
     setUserSession(null);
@@ -113,10 +107,9 @@ export function AuthProvider({
 }
 
 /**
- * 获取当前登录用户信息。
+ * Get the current signed-in user.
  *
- * 返回:
- * AuthContextValue
+ * @returns AuthContextValue
  */
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);

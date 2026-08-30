@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Food Mate 部署冒烟测试
+# Food Mate deploy smoke test
 #
-# 用法:
+# Usage:
 #   bash deploy/scripts/smoke-test.sh
 #   bash deploy/scripts/smoke-test.sh https://foodmates365.com
-#   bash deploy/scripts/smoke-test.sh http://127.0.0.1:8000   # 直连 API（跳过前端页）
+#   bash deploy/scripts/smoke-test.sh http://127.0.0.1:8000   # Hit the API directly (skip frontend pages)
 #
 
 set -uo pipefail
@@ -13,7 +13,7 @@ set -uo pipefail
 BASE="${1:-https://foodmates365.com}"
 BASE="${BASE%/}"
 CURL_OPTS=(-sS --max-time 30)
-# 本机自签 HTTPS 时加 -k
+# Add -k for local self-signed HTTPS
 if [[ "$BASE" == https://127.0.0.1* ]] || [[ "$BASE" == https://localhost* ]]; then
   CURL_OPTS+=(-k)
 fi
@@ -24,7 +24,7 @@ fail=0
 ok() { echo "[通过] $*"; pass=$((pass + 1)); }
 bad() { echo "[失败] $*"; fail=$((fail + 1)); }
 
-# 是否像「只测 API」（主机带非 443/80 端口）
+# Treat as API-only when the host includes a non-80/443 port
 is_api_only=0
 if [[ "$BASE" =~ :[0-9]+$ ]]; then
   port="${BASE##*:}"
@@ -36,7 +36,7 @@ fi
 echo "目标: $BASE"
 echo "----------------------------------------"
 
-# 1) 健康检查
+# 1) Health check
 health_body="$(curl "${CURL_OPTS[@]}" -f "$BASE/api/health" 2>/dev/null || true)"
 if [[ -n "$health_body" ]]; then
   ok "GET /api/health → $health_body"
@@ -44,7 +44,7 @@ else
   bad "健康检查失败（期望 /api/health）"
 fi
 
-# 2) 登录页（站点根测；直连 API 端口则跳过）
+# 2) Login page (site-root check; skip when hitting the API port directly)
 if [[ "$is_api_only" -eq 1 ]]; then
   echo "[跳过] GET /login（当前为目标 API 端口）"
 else
@@ -56,7 +56,7 @@ else
   fi
 fi
 
-# 3) 本机监听提示
+# 3) Local listen hints
 if command -v ss >/dev/null 2>&1; then
   if ss -lnt 2>/dev/null | grep -q ':8000'; then
     ok "本机 8000 在监听"
@@ -66,7 +66,7 @@ if command -v ss >/dev/null 2>&1; then
   echo "[提示] 请在 Azure NSG 确认未对公网开放 3000/8000/4000"
 fi
 
-# 4) SSE/聊天路由可达（未登录常见 401/403/422）
+# 4) SSE/chat route reachable (401/403/422 is common when unauthenticated)
 chat_code="$(curl "${CURL_OPTS[@]}" -o /dev/null -w '%{http_code}' \
   -X POST "$BASE/api/chat" \
   -H 'Content-Type: application/json' \

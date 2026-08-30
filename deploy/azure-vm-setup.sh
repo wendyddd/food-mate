@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
-# Food Mate — Azure Ubuntu VM 初始化脚本
-# 在已创建的 Ubuntu 22.04 VM 上以 root 或 sudo 执行一次。
+# Food Mate — Azure Ubuntu VM bootstrap script
+# Run once as root or with sudo on an existing Ubuntu 22.04 VM.
 #
-# 用法:
+# Usage:
 #   sudo bash deploy/azure-vm-setup.sh
 #   sudo FOODMATE_REPO_URL=https://github.com/YOU/food-mate.git bash deploy/azure-vm-setup.sh
 #
-# 前置:
-#   - 代码已放到 /opt/food-mate，或设置 FOODMATE_REPO_URL 自动 clone
-#   - 之后自行把 .env 密钥放到 /opt/food-mate/food-mate-api/.env
+# Prerequisites:
+#   - Code is already at /opt/food-mate, or set FOODMATE_REPO_URL to clone automatically
+#   - Afterwards, place .env secrets at /opt/food-mate/food-mate-api/.env
 #
 
 set -euo pipefail
@@ -29,7 +29,7 @@ require_root() {
   fi
 }
 
-# 安装系统依赖、Node 20、Python 3.11、Nginx
+# Install system packages, Node 20, Python 3.11, and Nginx
 install_packages() {
   log "更新 apt 并安装基础包 ..."
   export DEBIAN_FRONTEND=noninteractive
@@ -50,7 +50,7 @@ install_packages() {
   log "Node: $(node -v) / npm $(npm -v)"
 }
 
-# 创建应用用户与目录
+# Create the app user and directories
 ensure_user_and_dirs() {
   if ! id "$APP_USER" >/dev/null 2>&1; then
     log "创建用户 $APP_USER ..."
@@ -60,7 +60,7 @@ ensure_user_and_dirs() {
   chown -R "$APP_USER:$APP_USER" "$APP_ROOT" /var/log/foodmate
 }
 
-# 获取代码：已有目录则跳过 clone；否则用 FOODMATE_REPO_URL
+# Fetch code: skip clone if the tree already exists; otherwise clone FOODMATE_REPO_URL
 fetch_code() {
   if [ -d "$APP_ROOT/food-mate-api" ] && [ -d "$APP_ROOT/food-mate-web" ]; then
     log "检测到已有代码：$APP_ROOT"
@@ -80,7 +80,7 @@ fetch_code() {
   fi
 }
 
-# 后端 venv + 依赖
+# Backend venv and dependencies
 setup_api() {
   log "配置 Python 虚拟环境与后端依赖 ..."
   sudo -u "$APP_USER" "$PYTHON_BIN" -m venv "$APP_ROOT/venv"
@@ -101,7 +101,7 @@ setup_api() {
   sync_proxy_master_key
 }
 
-# 判断是否为占位 master_key（仓库默认值，不能用于生产鉴权）
+# Return true if master_key is a placeholder (repo default; not for production auth)
 is_placeholder_master_key() {
   case "${1:-}" in
     ""|sk-foodmate-local|sk-foodmate-change-me) return 0 ;;
@@ -109,7 +109,7 @@ is_placeholder_master_key() {
   esac
 }
 
-# 从 config.yaml 读取 general_settings.master_key
+# Read general_settings.master_key from config.yaml
 read_config_master_key() {
   grep -E '^[[:space:]]*master_key:' "$APP_ROOT/food-mate-api/config.yaml" 2>/dev/null \
     | head -1 \
@@ -117,7 +117,7 @@ read_config_master_key() {
     | tr -d "\"'"
 }
 
-# 从 .env 读取 FOODMATE_PROXY_MASTER_KEY（取最后一次出现，避免重复行）
+# Read FOODMATE_PROXY_MASTER_KEY from .env (last occurrence, in case of duplicate lines)
 read_env_master_key() {
   local envf="$APP_ROOT/food-mate-api/.env"
   if [ -f "$envf" ]; then
@@ -125,7 +125,7 @@ read_env_master_key() {
   fi
 }
 
-# 将 master_key 写入 .env（有则替换全部重复行，无则追加；补齐末尾换行）
+# Write master_key to .env (replace all duplicate lines, or append; ensure a trailing newline)
 write_env_master_key() {
   local key="$1"
   local envf="$APP_ROOT/food-mate-api/.env"
@@ -140,14 +140,14 @@ write_env_master_key() {
   fi
 }
 
-# 将 master_key 写入 config.yaml
+# Write master_key to config.yaml
 write_config_master_key() {
   local key="$1"
   sed -i -E "s/^([[:space:]]*master_key:).*/\1 ${key}/" \
     "$APP_ROOT/food-mate-api/config.yaml"
 }
 
-# 对齐 Proxy 与 API 的 master_key，避免 LiteLLM 把请求当成虚拟密钥并报 No connected db
+# Align Proxy and API master_key so LiteLLM does not treat the request as a virtual key and report No connected db
 sync_proxy_master_key() {
   local env_key config_key chosen
   env_key="$(read_env_master_key)"
@@ -169,17 +169,17 @@ sync_proxy_master_key() {
   log "已同步 LiteLLM master_key（config.yaml 与 .env 一致）"
 }
 
-# 前端生产构建（不设置跨端口 API，使用相对路径 /api）
+# Frontend production build (no cross-port API; use relative path /api)
 setup_web() {
   log "安装前端依赖并 build ..."
   cd "$APP_ROOT/food-mate-web"
   sudo -u "$APP_USER" npm ci || sudo -u "$APP_USER" npm install
-  # 明确不注入 NEXT_PUBLIC_FOODMATE_API_PORT，使 API_BASE=/api
+  # Do not inject NEXT_PUBLIC_FOODMATE_API_PORT so API_BASE stays /api
   sudo -u "$APP_USER" env -u NEXT_PUBLIC_FOODMATE_API_PORT -u NEXT_PUBLIC_API_BASE \
     npm run build
 }
 
-# 安装 systemd 与 Nginx
+# Install systemd units and Nginx
 install_services() {
   log "安装 systemd unit ..."
   cp "$APP_ROOT/deploy/systemd/foodmate-proxy.service" /etc/systemd/system/
@@ -193,7 +193,7 @@ install_services() {
   ln -sfn /etc/nginx/sites-available/foodmates365.conf /etc/nginx/sites-enabled/foodmates365.conf
   rm -f /etc/nginx/sites-enabled/default
 
-  # 若尚无 Origin 证书，生成自签占位（Cloudflare Full 模式可用；Full strict 请换成 Origin Cert）
+  # If no Origin certificate exists, generate a self-signed placeholder (works with Cloudflare Full; use Origin Cert for Full strict)
   if [ ! -f /etc/ssl/foodmate/origin.pem ]; then
     log "生成自签 TLS 证书占位（建议之后换成 Cloudflare Origin Certificate）..."
     openssl req -x509 -nodes -days 825 -newkey rsa:2048 \

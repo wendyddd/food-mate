@@ -1,5 +1,5 @@
 """
-LiteLLM Proxy 网关管理模块，封装 Proxy 进程的启动、健康检查与优雅关闭。
+LiteLLM Proxy gateway manager: start, health-check, and gracefully stop the Proxy process.
 """
 
 import atexit
@@ -17,10 +17,10 @@ _LITELLM_BIN = str(Path(sys.executable).parent / "litellm")
 
 class ProxyManager:
     """
-    LiteLLM Proxy 网关管理器。
+    LiteLLM Proxy gateway manager.
 
-    负责后台拉起 Proxy 子进程、轮询健康检查、优雅关闭，
-    支持作为 context manager 使用（with 语句自动停止）。
+    Starts the Proxy subprocess in the background, polls health checks, and
+    shuts down gracefully. Usable as a context manager (with-statement auto-stop).
     """
 
     def __init__(
@@ -33,15 +33,15 @@ class ProxyManager:
             startup_timeout: float = 60.0,
     ) -> None:
         """
-        初始化 ProxyManager
+        Initialize ProxyManager.
 
-        参数:
-            host (str): Proxy 监听地址
-            port (int): Proxy 监听端口
-            base_url (str): 健康检查所用的基础 URL
-            config_path (str): LiteLLM 配置文件路径
-            litellm_bin (str): litellm 可执行文件路径
-            startup_timeout (float): 启动等待超时秒数
+        Args:
+            host (str): Proxy bind address
+            port (int): Proxy bind port
+            base_url (str): Base URL used for health checks
+            config_path (str): LiteLLM config file path
+            litellm_bin (str): Path to the litellm executable
+            startup_timeout (float): Startup wait timeout in seconds
         """
         self.host = host
         self.port = port
@@ -52,15 +52,15 @@ class ProxyManager:
         self._process: subprocess.Popen | None = None
 
     # ------------------------------------------------------------------ #
-    # 公开接口
+    # Public API
     # ------------------------------------------------------------------ #
 
     def is_running(self) -> bool:
         """
-        通过 /health/liveliness 接口检测 Proxy 是否已在运行
+        Check whether the Proxy is running via /health/liveliness.
 
-        返回:
-            bool: True 表示 Proxy 已可用，False 表示不可用
+        Returns:
+            bool: True if the Proxy is available, False otherwise
         """
         try:
             resp = httpx.get(f"{self.base_url}/health/liveliness", timeout=2.0)
@@ -70,16 +70,17 @@ class ProxyManager:
 
     def start(self) -> None:
         """
-        启动 LiteLLM Proxy 网关。
+        Start the LiteLLM Proxy gateway.
 
-        若已有可用实例则直接复用；否则后台拉起新进程并阻塞等待就绪。
-        由本实例拉起的进程会在 Python 退出时自动清理。
+        Reuse an existing instance if one is already available; otherwise start a
+        new background process and block until ready. A process started by this
+        instance is cleaned up when Python exits.
 
-        返回:
+        Returns:
             None
 
-        抛出:
-            RuntimeError: Proxy 在超时内未能就绪
+        Raises:
+            RuntimeError: Proxy did not become ready within the timeout
         """
         if self.is_running():
             print(f"[proxy] 已检测到运行中的 LiteLLM Proxy，直接复用：{self.base_url}")
@@ -101,7 +102,7 @@ class ProxyManager:
         )
         print(f"[proxy] proxy_process pid: {self._process.pid}")
 
-        # 注册退出钩子，确保由本实例拉起的 Proxy 被关闭
+        # Register an exit hook so a Proxy started by this instance is shut down
         atexit.register(self.stop)
 
         if not self._wait_until_ready():
@@ -116,9 +117,9 @@ class ProxyManager:
 
     def stop(self) -> None:
         """
-        关闭由本实例拉起的 LiteLLM Proxy 子进程（若存在）
+        Stop the LiteLLM Proxy subprocess started by this instance, if any.
 
-        返回:
+        Returns:
             None
         """
         if self._process is not None and self._process.poll() is None:
@@ -130,11 +131,11 @@ class ProxyManager:
         self._process = None
 
     # ------------------------------------------------------------------ #
-    # Context manager 支持
+    # Context manager support
     # ------------------------------------------------------------------ #
 
     def __enter__(self) -> "ProxyManager":
-        """进入 with 块时自动启动 Proxy"""
+        """Start the Proxy when entering a with-block."""
         self.start()
         return self
 
@@ -144,19 +145,19 @@ class ProxyManager:
             exc_val: BaseException | None,
             exc_tb: TracebackType | None,
     ) -> None:
-        """退出 with 块时自动停止 Proxy"""
+        """Stop the Proxy when exiting a with-block."""
         self.stop()
 
     # ------------------------------------------------------------------ #
-    # 私有辅助
+    # Private helpers
     # ------------------------------------------------------------------ #
 
     def _wait_until_ready(self) -> bool:
         """
-        轮询等待 Proxy 健康检查通过
+        Poll until the Proxy health check succeeds.
 
-        返回:
-            bool: True 表示在超时前就绪，False 表示超时
+        Returns:
+            bool: True if ready before timeout, False if timed out
         """
         deadline = time.time() + self.startup_timeout
         while time.time() < deadline:
@@ -166,7 +167,7 @@ class ProxyManager:
         return False
 
 
-# 模块级默认实例，保持与原有调用方式兼容
+# Module-level default instance, compatible with the original call style
 _default_manager = ProxyManager()
 
 start_proxy = _default_manager.start

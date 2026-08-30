@@ -1,5 +1,5 @@
 """
-用户登录与 session 校验 API。
+User login and session verification API.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 class LoginRequest(BaseModel):
-    """登录请求体。"""
+    """Login request body."""
 
     uid: str
     pwd: str
@@ -25,9 +25,9 @@ class LoginRequest(BaseModel):
 @router.get("/health")
 async def health():
     """
-    服务健康检查（无需登录）。
+    Service health check (no login required).
 
-    返回:
+    Returns:
         dict: {status: ok}
     """
     return {"status": "ok"}
@@ -36,12 +36,12 @@ async def health():
 @router.post("/auth/login")
 async def login(req: LoginRequest):
     """
-    使用 uid 与密码登录。
+    Log in with uid and password.
 
-    参数:
-        req (LoginRequest): 登录凭据
+    Args:
+        req (LoginRequest): login credentials
 
-    返回:
+    Returns:
         dict: {uid, session}
     """
     user = authenticate(req.uid, req.pwd)
@@ -54,12 +54,12 @@ async def login(req: LoginRequest):
 @router.get("/auth/session/{user_session}")
 async def verify_session(user_session: str):
     """
-    校验 URL session 是否合法。
+    Verify whether a URL session is valid.
 
-    参数:
-        user_session (str): CSV 中的 session 标识
+    Args:
+        user_session (str): session identifier from the CSV
 
-    返回:
+    Returns:
         dict: {uid, session}
     """
     user = get_user_by_session(user_session)
