@@ -10,32 +10,29 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import Logo from "@/components/shared/Logo";
 
-/** 空态预设问题总数 */
+/** Total empty-state preset questions */
 const HINT_COUNT = 30;
-/** 每批展示条数 */
+/** Number of hints shown per batch */
 const HINT_PAGE_SIZE = 3;
 
-/** 预设问题 i18n key 列表 */
+/** i18n keys for preset questions */
 const HINT_KEYS: MessageKey[] = Array.from(
   { length: HINT_COUNT },
   (_, i) => `chat.hint${i + 1}` as MessageKey,
 );
 
 interface Props {
-  /** 来自记忆页的原话摘录，用于定位到来源用户消息 */
+  /** Original quote from the memory page, used to locate the source user message */
   highlightQuote?: string | null;
-  /** 定位处理完成后的回调（匹配成功或失败均调用） */
+  /** Called after locate finishes (whether the match succeeded or failed) */
   onHighlightDone?: () => void;
 }
 
 /**
- * 规范化原话摘录，去掉截断省略号以便与完整消息内容匹配。
+ * Normalize a source quote by stripping truncation ellipses so it can match full message text.
  *
- * 参数:
- *   quote (string): 记忆中的 source_quote
- *
- * 返回:
- *   string: 可用于匹配的摘录文本
+ * @param quote - source_quote from memory
+ * @returns Quote text suitable for matching
  */
 function normalizeQuote(quote: string): string {
   return quote
@@ -46,14 +43,11 @@ function normalizeQuote(quote: string): string {
 }
 
 /**
- * 在消息列表中按原话摘录查找来源用户消息。
+ * Find the source user message in the list by original quote.
  *
- * 参数:
- *   messages (ChatMessageType[]): 当前会话消息
- *   quote (string): 原话摘录
- *
- * 返回:
- *   ChatMessageType | null: 匹配到的用户消息，未找到则 null
+ * @param messages - Current session messages
+ * @param quote - Original quote excerpt
+ * @returns Matched user message, or null if not found
  */
 function findMessageByQuote(
   messages: ChatMessageType[],
@@ -75,7 +69,7 @@ function findMessageByQuote(
 }
 
 /**
- * 主聊天面板：消息列表、顶栏（含相关记忆召回开关）与输入框。
+ * Main chat panel: message list, top bar (including related-memory recall toggle), and input.
  */
 export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
   const { messages, sessions, sessionId, isStreaming, suggestedQuestions } =
@@ -85,11 +79,11 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [ragMode, setRagModeState] = useState(true);
   const [ragBusy, setRagBusy] = useState(false);
-  /** 空态预设问题当前批次下标 */
+  /** Current batch index for empty-state preset questions */
   const [hintPage, setHintPage] = useState(0);
-  /** 待处理的定位 quote */
+  /** Quote waiting to be located */
   const pendingQuoteRef = useRef<string | null>(null);
-  /** 定位流程中抑制默认滚底，避免与 scrollIntoView 目标消息冲突 */
+  /** Suppress default scroll-to-bottom during locate so it does not fight scrollIntoView */
   const suppressBottomScrollRef = useRef(false);
 
   useEffect(() => {
@@ -99,7 +93,7 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
     }
   }, [highlightQuote]);
 
-  // 有待定位原话时：匹配消息 → 滚动到目标；匹配失败则滚到底
+  // When a quote is pending: match the message → scroll to it; if no match, scroll to bottom
   useEffect(() => {
     const quote = pendingQuoteRef.current;
     if (!quote || messages.length === 0) return;
@@ -113,7 +107,7 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
       onHighlightDone?.();
-      // 同 session 仅换 quote 时 messages 不变，滚底 effect 不会消费 suppress，需异步解除
+      // Same session, new quote only: messages do not change, so the scroll-bottom effect will not consume suppress; lift it asynchronously
       queueMicrotask(() => {
         suppressBottomScrollRef.current = false;
       });
@@ -125,10 +119,10 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
     onHighlightDone?.();
   }, [messages, highlightQuote, onHighlightDone]);
 
-  // 无定位目标时保持跟到底部（流式输出 / 普通切换会话）
+  // Follow the bottom when there is no locate target (streaming / ordinary session switch)
   useEffect(() => {
     if (pendingQuoteRef.current) return;
-    // 本轮由原话定位触发的 messages 更新：跳过一次滚底，并解除抑制
+    // This messages update was triggered by quote locate: skip one scroll-to-bottom and lift the suppress
     if (suppressBottomScrollRef.current) {
       suppressBottomScrollRef.current = false;
       return;
@@ -139,14 +133,14 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
   useEffect(() => {
     let cancelled = false;
     /**
-     * 挂载时拉取 RAG 开关状态。
+     * Fetch RAG toggle state on mount.
      */
     async function loadRagMode() {
       try {
         const data = await getRagMode();
         if (!cancelled) setRagModeState(Boolean(data.rag_mode));
       } catch {
-        // 拉取失败时保持默认关闭
+        // Keep the default off if fetch fails
       }
     }
     loadRagMode();
@@ -156,10 +150,9 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
   }, []);
 
   /**
-   * 切换相关记忆召回开关并同步到后端。
+   * Toggle related-memory recall and sync to the backend.
    *
-   * 参数:
-   *   enabled (boolean): 是否开启
+   * @param enabled - Whether recall is on
    */
   async function handleToggleRag(enabled: boolean) {
     if (ragBusy) return;
@@ -188,13 +181,13 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
     hintPage * HINT_PAGE_SIZE + HINT_PAGE_SIZE,
   ).map((key) => t(key));
 
-  // 切换语言时回到第一批，避免文案与页码错位观感
+  // Reset to the first batch on locale change so copy and page index stay aligned
   useEffect(() => {
     setHintPage(0);
   }, [locale]);
 
   /**
-   * 切换到下一批预设问题（循环）。
+   * Advance to the next batch of preset questions (wraps around).
    */
   function refreshHints() {
     setHintPage((page) => (page + 1) % hintPageCount);
@@ -218,6 +211,7 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {/* Relevant-memory recall toggle is hidden for now; code kept for later restore
           {isShow && (
             <div className="flex items-center gap-1.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -269,6 +263,7 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
               </span>
             </div>
           )}
+          */}
         </div>
       </div>
 
@@ -349,10 +344,9 @@ export default function ChatPanel({ highlightQuote, onHighlightDone }: Props) {
 }
 
 /**
- * 空态快捷提示按钮，点击后直接发送该文案。
+ * Empty-state shortcut button; click sends the hint text immediately.
  *
- * 参数:
- *   text (string): 提示文案
+ * @param text - Hint copy
  */
 function QuickHint({ text }: { text: string }) {
   const { sendMessage, isStreaming } = useApp();
